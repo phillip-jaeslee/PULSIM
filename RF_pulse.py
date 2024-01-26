@@ -14,27 +14,33 @@ t_max           - maximum time of T
 BW              - bandwith (kHz)
 """
 
-Gamma = 42.58 # kHz/mT
+Gamma = 42.58 # kHz/mT proton gyromagnetic ratio
 
 M0 = 1
 M_equilibrium = np.array([0, 0, M0])
-dt = 0.1
+dt = 0.1            # time step (ms)
 
-flip = np.pi / 2
+flip = - np.pi    # 90 degree (pi/2 rad)
 
 # hard pulse
-t_max = 1.5
-N = t_max / dt
-init = -N/2
-final = N/2 - 1
-t = np.arange(init, final+1, 1) * dt
+"""
+t_max = 1.5       # duration (ms)
+N = t_max / dt      # Number of steps
+"""
+t_max = 0.0192
+N = 100
+dt = t_max / N
+init = -N/2       
+final = N/2 + 1
+t = np.arange(init, final-1, 1) * dt
+
 RF = np.ones((1, int(N)))
 RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
-BW = 2 # kHz
-df = np.linspace(-BW, BW, num=100)
+BW = 4 # kHz
+df = np.linspace(-BW/2, BW/2, num=100)
 M = np.tile(M_equilibrium, (len(df), 1)).T
 M = M.astype(float)
-
+print(len(t))
 for n in range(len(t)):
     for f in range(len(df)):
         M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma])

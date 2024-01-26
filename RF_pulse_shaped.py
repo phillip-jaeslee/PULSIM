@@ -27,8 +27,8 @@ flip = np.pi / 2
 t_max = 8
 N = t_max / dt
 init = -N/2
-final = N/2 - 1
-t = np.arange(init, final+1, 1) * dt
+final = N/2
+t = np.arange(init, final, 1) * dt
 RF = np.hamming(N).T * np.sinc(t)
 RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
