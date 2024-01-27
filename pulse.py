@@ -2,15 +2,17 @@ import numpy as np
 from bloch import bloch_rotate
 
 
-def shaped_pulse(M, flip, t_max, shape, N, BW, Gamma) :
+def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
     ## shaped pulse calculator
     """
+    M, df, RF, t_max = shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma)
     parameters 
     input:
     M               - magnetization vector 
     N               - the number of points of the pulse
     dt              - size of each step
+    angle           - flip angle position (x, y, z)
     flip            - flip angle (rad)
     t_max           - duration of pulse
     shape           - shape of the pulse (options: sinc, cos)
@@ -38,19 +40,21 @@ def shaped_pulse(M, flip, t_max, shape, N, BW, Gamma) :
 
     for n in range(len(t)):
         for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma])
+            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
 
     return M, df, RF, t_max
 
-def hard_pulse(M, flip, t_max, N, BW, Gamma):
+def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
 
     ## hard pulse calculator
     """
+    M, df, RF, t_max = hard_pulse(M, flip, angle, t_max, N, BW, Gamma)
     parameters 
     input:
     M               - magnetization vector 
     N               - the number of points of the pulse
     dt              - size of each step
+    angle           - flip angle position (x, y, z)
     flip            - flip angle (rad)
     t_max           - duration of pulse
     BW              - bandwith (kHz)
@@ -72,6 +76,6 @@ def hard_pulse(M, flip, t_max, N, BW, Gamma):
 
     for n in range(len(t)):
         for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma])
+            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma], angle)
 
     return M, df, RF, t_max

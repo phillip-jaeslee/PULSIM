@@ -48,14 +48,22 @@ M_init  : initial magnetization
 T       : duration [ms]
 B       : [Bx, By, Bz] - magnetic field [mT]
 M_final : final magnetization
+angle   : flip angle among coordinates (x, y, z)
 """
 
-def bloch_rotate(M_init, T, B):
+def bloch_rotate(M_init, T, B, angle):
     Gamma = 42.58  # kHz/mT MHz/T
     flip = 2*np.pi* Gamma * np.linalg.norm(B) * T
     eta = np.arccos(B[2] / (np.linalg.norm(B) +np.finfo(np.float64).eps))
     theta = np.arctan2(B[1], B[0])
-    M_final = Rz(-theta)@Ry(-eta)@Rz(flip)@Ry(eta)@Rz(theta) @ M_init
+    if angle == "x":
+        M_final = Rz(-theta)@Ry(-eta)@Rz(flip)@Ry(eta)@Rz(theta) @ M_init
+    elif angle == "y":
+        M_final = Rx(-theta)@Rz(-eta)@Rx(flip)@Rz(eta)@Rx(theta) @ M_init
+    elif angle == "z":
+        M_final = Ry(-theta)@Rx(-eta)@Ry(flip)@Rx(eta)@Ry(theta) @ M_init
+    else:
+        raise ValueError(f'Failed to run the proper bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
 
     return M_final
 

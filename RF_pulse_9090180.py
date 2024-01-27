@@ -26,17 +26,17 @@ t_max_temp = np.ndarray(shape=(3, 1, N))
 # shaped Pulse (sinc)
 i = 0
 print("first pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i] = shaped_pulse(M, np.pi / 2, 0.6, "sinc" , N, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i] = shaped_pulse(M, np.pi / 2, "x", 0.6, "sinc" , N, BW, Gamma)
 
 # shaped Pulse (sinc)
 i += 1
 print("second pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i] = shaped_pulse(M, np.pi / 2, 0.6, "sinc", N, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i] = shaped_pulse(M, np.pi / 2, "x", 0.6, "sinc", N, BW, Gamma)
 
 # hard pulse
 i += 1
 print("third pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i] = hard_pulse(M, -np.pi, 0.0192, N, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i] = hard_pulse(M, -np.pi, "x", 0.0192, N, BW, Gamma)
 
 RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
 RF_t = np.append(RF_t, RF_temp[2, :, :])
