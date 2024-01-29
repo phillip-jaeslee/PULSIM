@@ -41,11 +41,8 @@ RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
 RF_t = np.append(RF_t, RF_temp[2, :, :])
 
 t_1 = np.arange(0, N, 1) * t_max_temp[0] / N
-print(t_1)
 t_2 = np.arange(0, N, 1) * t_max_temp[1] / N + t_max_temp[0]
-print(t_2)
 t_3 = np.arange(0, N, 1) * t_max_temp[2] / N + t_max_temp[0] + t_max_temp[1]
-print(t_3)
 
 t = np.append(t_1, t_2)
 t = np.append(t, t_3)
