@@ -31,7 +31,7 @@ def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
     if shape == "sinc":
         RF = np.hamming(N).T  * np.sinc(t)
     elif shape == "cos":
-        RF = np.hamming(N).T * np.cos(t)
+        RF = np.cos(np.pi / t_max * t)
     else:
         print("There is no such type of the envelop function")
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
