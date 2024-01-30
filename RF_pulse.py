@@ -20,14 +20,14 @@ M0 = 1
 M_equilibrium = np.array([0, 0, M0])
 dt = 0.1            # time step (ms)
 
-flip = - np.pi    # 90 degree (pi/2 rad)
+flip = np.pi    # 90 degree (pi/2 rad)
 
 # hard pulse
 """
 t_max = 1.5       # duration (ms)
 N = t_max / dt      # Number of steps
 """
-t_max = 0.0192
+t_max = 2
 N = 100
 dt = t_max / N
 init = -N/2       
@@ -43,7 +43,7 @@ M = M.astype(float)
 print(len(t))
 for n in range(len(t)):
     for f in range(len(df)):
-        M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma])
+        M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma], "x")
     
 
 fig, axs = plt.subplots(2, 1)

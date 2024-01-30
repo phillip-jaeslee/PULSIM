@@ -12,16 +12,30 @@ Gamma = 42.58 # kHz/mT
 M0 = 1
 M_equilibrium = np.array([0, 0, M0])
 
-N = 1000
+N = 3000
+N_0 = 0
 
 M = np.tile(M_equilibrium, (N, 1)).T
 M = M.astype(float)
 
 flip = np.pi /2
-t_max = 10
+t_max = 0.6
 angle = "x"
 
-M = sim_shaped_pulse(M, flip, angle, t_max, "cos", N, Gamma)
+
+M, N_1 = sim_shaped_pulse(M, flip, angle, t_max, "cos", N_0, 1000, Gamma)
+
+flip = np.pi
+t_max = 0.0192
+M, N_2 = sim_hard_pulse(M, flip, angle, t_max, N_1, 1000, Gamma)
+
+
+flip = np.pi /2
+t_max = 0.6
+angle = "x"
+
+M, N_3 = sim_shaped_pulse(M, flip, angle, t_max, "cos", N_2, 1000, Gamma)
+
 
 plot_3D_arrow_figure(M, N)
 

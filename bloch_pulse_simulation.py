@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from bloch import bloch_rotate
 
-def sim_shaped_pulse(M, flip, angle, t_max, shape, N, Gamma):
+def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
 
     ## shaped pulse simulator
     """
@@ -21,7 +21,6 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N, Gamma):
     output:
     M               - final magnetization vector in time
     """
-
     dt = t_max / N
     init = -N/2
     final = N/2
@@ -34,12 +33,14 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N, Gamma):
         print("There is no such type of the envelop function")
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
-    for n in range(N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n]), np.imag(RF[n]), 0], angle)
+    for n in range(N_init, N_init + N):
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), 0], angle)
 
-    return M
+    N_final = N + N_init
 
-def sim_hard_pulse(M, flip, angle, t_max, N, Gamma):
+    return M, N_final
+
+def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
 
     ## hard pulse simulator
     """
@@ -55,7 +56,6 @@ def sim_hard_pulse(M, flip, angle, t_max, N, Gamma):
     output:
     M               - final magnetization vector in time
     """
-
     dt = t_max / N
     init = -N/2
     final = N/2
@@ -63,10 +63,12 @@ def sim_hard_pulse(M, flip, angle, t_max, N, Gamma):
     RF = np.ones((1, int(N)))
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
-    for n in range(N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), 0], angle)
+    for n in range(N_init, N_init + N):
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n-N_init]), np.imag(RF[0, n-N_init]), 0], angle)
 
-    return M
+    N_final = N + N_init
+
+    return M, N_final
 
 
 
@@ -86,6 +88,7 @@ def plot_3D_arrow_figure(M, N):
     ax = fig.add_subplot(111, projection='3d')
 
     def get_arrow(i):
+        # drawing the arrow of vector M for each time point
             x = 0
             y = 0
             z = 0
@@ -99,9 +102,13 @@ def plot_3D_arrow_figure(M, N):
     quiver = ax.quiver(*get_arrow(0))
 
     def update(frame):
+        # updating the each quiver for time point
         global quiver
         quiver.remove()
         quiver = ax.quiver(*get_arrow(frame), pivot='tail', color='r')
+        ax.set_title(f'Time: {frame * 1} frame')
+
+    # Plotting radius 1 sphere surface
     radius = 1
     num_phi=20
     num_theta=20
@@ -116,6 +123,7 @@ def plot_3D_arrow_figure(M, N):
 
     ax.plot_surface(x, y, z, color='k', alpha=0.05, edgecolors='k', linewidth=0.1)
 
+    # axis condition
     ax.set_xlim(-1.5, 1.5)
     ax.set_ylim(-1.5, 1.5)
     ax.set_zlim(-1.5, 1.5)
