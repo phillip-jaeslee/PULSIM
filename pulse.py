@@ -33,7 +33,7 @@ def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
     elif shape == "cos":
         RF = np.cos(np.pi / t_max * t)
     else:
-        print("There is no such type of the envelop function")
+        raise ValueError(f'Failed to run the proper bloch rotation with "{shape}".')
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
     df = np.linspace(-BW/2, BW/2, num=1000)

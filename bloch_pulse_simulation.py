@@ -30,7 +30,7 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
     elif shape == "cos":
         RF = np.hamming(N).T * np.cos(t)
     else:
-        print("There is no such type of the envelop function")
+        raise ValueError(f'Failed to run the proper bloch rotation with "{shape}".')
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
     for n in range(N_init, N_init + N):
@@ -84,6 +84,7 @@ def plot_3D_arrow_figure(M, N):
     output:
     ani             - 3D plotted animation
     """
+    global fig, ax
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -106,7 +107,7 @@ def plot_3D_arrow_figure(M, N):
         global quiver
         quiver.remove()
         quiver = ax.quiver(*get_arrow(frame), pivot='tail', color='r')
-        ax.set_title(f'Time: {frame * 1} frame')
+        ax.set_title(f'Time: {frame * 1} miliseconds')
 
     # Plotting radius 1 sphere surface
     radius = 1
