@@ -20,13 +20,13 @@ M = M.astype(float)
 df_temp = np.ndarray(shape=(3, 1, 1000))
 RF_temp = np.ndarray(shape=(3, 1, N))
 t_max_temp = np.ndarray(shape=(3, 1, N))
-file_path = 'wave/sine.jhl'
+file_path = 'wave/5lobe_sinc_1000'
 
 
 # shaped Pulse (sine)
 i = 0
 print(f'first pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 5, file_path, BW, Gamma)
 
 # hard Pulse
 i += 1
@@ -36,7 +36,7 @@ M, df_temp[i], RF_temp[i], t_max_temp[i] = hard_pulse(M, -np.pi, "x", 0.0192, N,
 # shaped Pulse (sine)
 i += 1
 print(f'thrid pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 5, file_path, BW, Gamma)
 
 
 RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
