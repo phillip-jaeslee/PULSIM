@@ -3,6 +3,13 @@ import numpy.matlib
 from bloch import bloch_rotate
 import matplotlib.pyplot as plt
 
+def gaussian(x, mu, sig):
+    return (
+        1.0 / (np.sqrt(2.0 * np.pi) * sig) * np.exp(-np.power((x - mu) / sig, 2.0) / 2)
+    )
+
+
+
 ## shaped pulse calculator
 
 """
@@ -19,7 +26,7 @@ Gamma = 42.58 # kHz/mT
 
 M0 = 1
 M_equilibrium = np.array([0, 0, M0])
-dt = 0.1
+dt = 0.001
 
 flip = np.pi / 2
 
@@ -29,11 +36,11 @@ N = t_max / dt
 init = -N/2
 final = N/2
 t = np.arange(init, final, 1) * dt
-RF = np.cos(np.pi / t_max * t)
+RF = np.sinc(2*np.pi*t)
 plt.plot(t, RF)
 RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
-BW = 2 # kHz
+BW = 3 # kHz
 df = np.linspace(-BW, BW, num=100)
 
 M = np.tile(M_equilibrium, (len(df), 1)).T
@@ -55,6 +62,7 @@ axs[1].plot(df, np.sqrt(M[0,:]**2+M[1,:]**2), label="|Mxy|")
 axs[1].set(xlabel='frequency (Hz)', ylabel='flip')
 axs[1].legend()
 plt.show()
+
 
 
 

@@ -29,6 +29,8 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
         RF = np.hamming(N).T  * np.sinc(t)
     elif shape == "cos":
         RF = np.hamming(N).T * np.cos(t)
+    elif shape == "sinc2p":
+        RF = np.sinc(2*np.pi*t)
     else:
         raise ValueError(f'Failed to run the proper bloch rotation with "{shape}".')
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
@@ -136,3 +138,4 @@ def plot_3D_arrow_figure(M, N):
     plt.show()
 
     return ani
+
