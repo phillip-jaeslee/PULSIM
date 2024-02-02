@@ -1,8 +1,11 @@
+import time
 import numpy as np
 from bloch import bloch_rotate
 from file_import import import_file, read_xy_points
 
 def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
+
+    start = time.time()
 
     ## shaped pulse calculator
     """
@@ -39,10 +42,16 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
         for f in range(len(df)):
             M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
 
+    end = time.time()
+
+    print('elapsed time: {} sec'.format(end-start) )
+
     return M, df, RF, t_max
 
 def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
+    start = time.time()
+    
     ## shaped pulse calculator
     """
     M, df, RF, t_max = shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma)
@@ -85,10 +94,16 @@ def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
         for f in range(len(df)):
             M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
 
+    end = time.time()
+
+    print('elapsed time: {} sec'.format(end-start) )
+
     return M, df, RF, t_max
 
 def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
 
+    start = time.time()
+    
     ## hard pulse calculator
     """
     M, df, RF, t_max = hard_pulse(M, flip, angle, t_max, N, BW, Gamma)
@@ -120,6 +135,10 @@ def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     for n in range(len(t)):
         for f in range(len(df)):
             M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma], angle)
+
+    end = time.time()
+
+    print('elapsed time: {} sec'.format(end-start) )
 
     return M, df, RF, t_max
 
