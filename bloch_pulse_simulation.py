@@ -3,6 +3,43 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from bloch import bloch_rotate
+from file_import import import_file
+
+def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, Gamma):
+
+    ## shaped pulse calculator
+    """
+    M, df, RF, t_max = shaped_pulse(M, flip, angle, t_max, file_path, Gamma)
+    parameters 
+    input:
+    M               - magnetization vector 
+    file_path       - file path for composite pulse
+    angle           - flip angle position (x, y, z)
+    flip            - flip angle (rad)
+    t_max           - duration of pulse
+    output:
+    M               - final magnetization vector
+    df              - bandwith array of the pulse
+    RF              - pulse shape array
+    t               - time array of the pulse
+    t_max           - duration of pulse (need to be stored to plot the pulse diagram)
+    """
+    xy_array = import_file(file_path)
+    N = len(xy_array)
+    dt = t_max / N
+    init = -N/2
+    final = N/2
+    t = np.arange(init, final, 1) * dt
+    RF = xy_array[:, 0]
+    RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
+
+    for n in range(N_init, N_init + N):
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), 0], angle)
+
+    N_final = N_init + N
+
+    return M, N_final
+
 
 def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
 

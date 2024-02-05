@@ -9,16 +9,14 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
 
     ## shaped pulse calculator
     """
-    M, df, RF, t_max = shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma)
+    M, df, RF, t_max = shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma)
     parameters 
     input:
     M               - magnetization vector 
-    N               - the number of points of the pulse
-    dt              - size of each step
     angle           - flip angle position (x, y, z)
     flip            - flip angle (rad)
     t_max           - duration of pulse
-    shape           - shape of the pulse (options: sinc, cos)
+    file_path       - file path for composite pulse
     BW              - bandwith (kHz)
     output:
     M               - final magnetization vector
