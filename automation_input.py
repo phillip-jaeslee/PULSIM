@@ -3,7 +3,7 @@ import numpy.matlib
 from bloch import bloch_rotate
 import matplotlib.pyplot as plt
 from pulse import shaped_pulse, hard_pulse, import_shaped_pulse
-from input_parameter import gyro_ratio, get_spin_parameters
+from input_parameter import gyro_ratio, get_spin_parameters, get_pulse_parameters, number_to_words
 
 
 global Gamma
@@ -19,34 +19,41 @@ M = M.astype(float)
 df_temp = np.ndarray(shape=(num_pulse, 1, 1000))
 RF_temp = np.ndarray(shape=(num_pulse, 1, N))
 t_max_temp = np.ndarray(shape=(num_pulse, 1, N))
-file_path = 'wave/sine.jhl'
 
+RF_t = np.ndarray(shape=(num_pulse, 1, N))
+t_temp = np.ndarray(shape=(num_pulse, 1, N))
+t = np.ndarray(shape=(num_pulse, 1, N))
 
-# shaped Pulse (sine)
-i = 0
-print(f'first pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+for i in range(num_pulse):
+    pulse_type = get_pulse_parameters()[0]
+    if pulse_type == 1:
+        pulse_type, file_path, flip, angle, t_max = get_pulse_parameters()
+        print(f'{number_to_words(i+1)} pulse "{file_path}" running...')
+        M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma)
 
-# hard Pulse
-i += 1
-print("second pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i] = hard_pulse(M, -np.pi, "x", 0.0192, N, BW, Gamma)
+    elif pulse_type == 2:
+        pulse_type, flip, angle, t_max, N = get_pulse_parameters()
+        print(f'{number_to_words(i+1)} pulse "hard" running...')
+        M, df_temp[i], RF_temp[i], t_max_temp[i] = hard_pulse(M, flip, angle, t_max, N, BW, Gamma)
 
-# shaped Pulse (sine)
-i += 1
-print(f'thrid pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i] =import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+    elif pulse_type == 3:
+        pulse_type, flip, angle, shape, t_max = get_pulse_parameters()
+        print(f'{number_to_words(i+1)} pulse "{shape}" running...')
+        M, df_temp[i], RF_temp[i], t_max_temp[i] = shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma)
 
+    else:
+        raise ValueError(f'Error of pulse type')
 
-RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
-RF_t = np.append(RF_t, RF_temp[2, :, :])
+for n in range(num_pulse):
+    RF_t = np.append(RF_t, RF_temp[i, :, :])
 
-t_1 = np.arange(0, N, 1) * t_max_temp[0] / N
-t_2 = np.arange(0, N, 1) * t_max_temp[1] / N + t_max_temp[0]
-t_3 = np.arange(0, N, 1) * t_max_temp[2] / N + t_max_temp[0] + t_max_temp[1]
+for j in range(num_pulse):
+    t_temp[j] = np.arange(0, N, 1) * t_max_temp[j] / N 
+    for k in range(j):
+        t_temp[j] = t_temp[j] + t_max_temp[k]
 
-t = np.append(t_1, t_2)
-t = np.append(t, t_3)
+for r in range(num_pulse):
+    t = np.append(t, t_temp[r])
 
 for n in range(len(df)):
     if M[2, n] > 0.9:

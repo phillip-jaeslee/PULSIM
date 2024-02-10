@@ -1,4 +1,5 @@
 import numpy as np
+import inflect
 
 def gyro_ratio(nucleus):
     global Gamma
@@ -44,24 +45,28 @@ def get_spin_parameters():
     return Gamma, num_pulse, BW, M_equilibrium
 
 def get_pulse_parameters():
-    pulse_type = int(input('Choose pulse type \n [1] composite [2] hard [3] shaped'))
+    pulse_type = int(input('Choose pulse type \n [1] composite [2] hard [3] shaped : '))
     if pulse_type == 1:
         file_path = input('file path : ')
         flip = int(input('flip angle (degree) : ')) * np.pi / 180
         angle = input('flip angle direction : ')
         t_max = float(input('time duration : '))
-        return file_path, flip, angle, t_max
+        return pulse_type, file_path, flip, angle, t_max
 
     elif pulse_type == 2:
         flip = int(input('flip angle (degree) : ')) * np.pi / 180
         angle = input('flip angle direction : ')
         t_max = float(input('time duration : '))
         N = int(input('the number of point of the hard pulse : '))
-        return flip, angle, t_max
+        return pulse_type, flip, angle, t_max, N
 
     elif pulse_type == 3:
         flip = int(input('flip angle (degree) : ')) * np.pi / 180
         angle = input('flip angle direction : ')
         shape = input('shape (sinc, cos, gauss) : ')
-        t_max = float(input('time duration :v'))
-        return flip, angle, shape, t_max
+        t_max = float(input('time duration : '))
+        return pulse_type, flip, angle, shape, t_max
+
+def number_to_words(number):
+    p = inflect.engine()
+    return p.ordinal(number)
