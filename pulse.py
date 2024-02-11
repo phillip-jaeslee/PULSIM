@@ -44,7 +44,7 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
 
     print('elapsed time: {} sec'.format(end-start) )
 
-    return M, df, RF, t_max
+    return M, df, RF, t_max, N
 
 def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
@@ -96,7 +96,7 @@ def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
     print('elapsed time: {} sec'.format(end-start) )
 
-    return M, df, RF, t_max
+    return M, df, RF, t_max, N
 
 def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
 
@@ -138,7 +138,7 @@ def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
 
     print('elapsed time: {} sec'.format(end-start) )
 
-    return M, df, RF, t_max
+    return M, df, RF, t_max, N
 
 
 def gaussian(x, mu, sig):
