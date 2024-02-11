@@ -62,20 +62,19 @@ for i in range(num_pulse):
     else:
         raise ValueError(f'Error of pulse type')
 
-RF_t = np.empty(shape=(1, np.sum(N)), dtype='float')
+RF_t = np.zeros(shape=(1, np.sum(N)), dtype='float')
 
 for n in range(num_pulse):
     RF_t = np.append(RF_t, RF_temp[n, :, :])
 
-t_temp = np.empty(shape=(num_pulse, N_t), dtype='float')
-t = np.empty(shape=(np.sum(N)), dtype='float')
+t_temp = np.zeros(shape=(num_pulse, N_t), dtype='float')
+t = np.zeros(shape=(np.sum(N)), dtype='float')
 
 for j in range(num_pulse):
     t_temp[j] = np.arange(0, N[j], 1) * t_max_temp[j] / N[j]
     k = 0
     for k in range(j):
         t_temp[j] = t_temp[j] + t_max_temp[k]
-    print(t_temp[j])
 
 for r in range(num_pulse):
     t = np.append(t, t_temp[r])
@@ -86,9 +85,9 @@ for n in range(len(df)):
         break
 
 fig, axs = plt.subplots(2, 1)
-axs[0].plot(t[0]-np.finfo(np.float64).eps, 0)
+#axs[0].plot(t[0]-np.finfo(np.float64).eps, 0)
 axs[0].plot(t, RF_t.T)
-axs[0].plot(t[-1]+np.finfo(np.float64).eps, 0)
+#axs[0].plot(t[-1]+np.finfo(np.float64).eps, 0)
 axs[0].set(xlabel='time (ms)', ylabel='RF (mT)')
 df = df * 1000
 axs[1].plot(df, M[2,:], label="Mz")
