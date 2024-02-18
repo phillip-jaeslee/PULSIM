@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from bloch import bloch_rotate
-from bloch_pulse_simulation import sim_hard_pulse, sim_shaped_pulse, plot_3D_arrow_figure, sim_import_shaped_pulse
+from bloch_pulse_simulation import sim_hard_pulse, sim_shaped_pulse, plot_3D_arrow_figure, sim_import_shaped_pulse, save_animation_to_gif
 
 
 global Gamma, BW
@@ -40,5 +40,6 @@ angle = "x"
 
 M, N_3 = sim_import_shaped_pulse(M, flip, angle, t_max_3, file_path, N_2, Gamma)
 
-plot_3D_arrow_figure(M, N_3)
+ani = plot_3D_arrow_figure(M, N_3)
 
+save_animation_to_gif(ani, 'animation_5.gif') # save the animation to gif file 
