@@ -176,3 +176,9 @@ def plot_3D_arrow_figure(M, N):
 
     return ani
 
+def save_animation_to_gif(ani, file_name):
+    """
+    ani         : animation returned by FuncAnimation
+    file_name   : save file names with file index
+    """
+    ani.save(file_name, writer='pillow', fps=10000, dpi=300) # pip install pillow or conda install pillow
