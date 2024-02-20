@@ -30,12 +30,13 @@ def import_file(file_path):
 
     xy_array = read_xy_points(file_path)
 
-    xy_array = np.array(xy_array)
+    xy_array = np.array(xy_array, dtype=np.complex128)
 
     # convert phase (180 degree to negative sign)
+    '''
     for n in range(len(xy_array)):
         if xy_array[n, 1] == 180:
             xy_array[n , 0] = -xy_array[n, 0]
-
+    '''
     return xy_array
 

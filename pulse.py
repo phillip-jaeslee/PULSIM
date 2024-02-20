@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from rotation import Rot
 from bloch import bloch_rotate
 from file_import import import_file, read_xy_points
 
@@ -26,12 +27,17 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
     t_max           - duration of pulse (need to be stored to plot the pulse diagram)
     """
     xy_array = import_file(file_path)
+    RF_array = np.zeros(np.shape(xy_array), dtype=np.complex128)
     N = len(xy_array)
     dt = t_max / N
     init = -N/2
     final = N/2
     t = np.arange(init, final, 1) * dt
-    RF = xy_array[:, 0]
+    for k in range(len(xy_array)):
+        xy_temp = np.zeros((2, 1), dtype=np.complex128)
+        xy_temp = Rot(xy_array[k, 1]* np.pi / 180) @ np.array([1, 0]).T
+        RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
+    RF = xy_array[:, 0] * RF_array[:, 1]
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
     df = np.linspace(-BW/2, BW/2, num=1000)
