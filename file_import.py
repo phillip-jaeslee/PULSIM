@@ -30,7 +30,7 @@ def import_file(file_path):
 
     xy_array = read_xy_points(file_path)
 
-    xy_array = np.array(xy_array, dtype=np.complex128)
+    xy_array = np.array(xy_array, dtype=float)
 
     # convert phase (180 degree to negative sign)
     '''

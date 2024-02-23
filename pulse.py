@@ -33,12 +33,18 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
     init = -N/2
     final = N/2
     t = np.arange(init, final, 1) * dt
+    
     for k in range(len(xy_array)):
-        xy_temp = np.zeros((2, 1), dtype=np.complex128)
-        xy_temp = Rot(xy_array[k, 1]* np.pi / 180) @ np.array([1, 0]).T
+        xy_temp = np.zeros((2, 1), dtype=float)
+        xy_temp = Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
         RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
+    if (max(xy_array[:,1])>=350):
+        pul_type = "adiabatic"
     RF = xy_array[:, 0] * RF_array[:, 1]
-    RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
+    if (pul_type == "adiabatic"):
+        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt) * 2
+    else:
+        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt)
 
     df = np.linspace(-BW/2, BW/2, num=1000)
 
