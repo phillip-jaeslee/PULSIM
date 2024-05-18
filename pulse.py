@@ -3,6 +3,8 @@ import numpy as np
 from rotation import Rot
 from bloch import bloch_rotate
 from file_import import import_file, read_xy_points
+from joblib import Parallel, delayed
+
 
 def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
 
@@ -33,7 +35,7 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
     init = -N/2
     final = N/2
     t = np.arange(init, final, 1) * dt
-    
+    pul_type = ""
     for k in range(len(xy_array)):
         xy_temp = np.zeros((2, 1), dtype=float)
         xy_temp = Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
@@ -48,9 +50,8 @@ def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
 
     df = np.linspace(-BW/2, BW/2, num=1000)
 
-    for n in range(len(t)):
-        for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
+    M = Parallel(n_jobs=-1)(delayed(parallel_rotate_shape)(M[:, f], t, RF, Gamma, angle, dt, df[f]) for f in range(len(df)))
+    M = np.array(M).T
 
     end = time.time()
 
@@ -100,9 +101,9 @@ def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
     df = np.linspace(-BW/2, BW/2, num=1000)
 
-    for n in range(len(t)):
-        for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
+    M = Parallel(n_jobs=-1)(delayed(parallel_rotate_shape)(M[:, f], t, RF, Gamma, angle, dt, df[f]) for f in range(len(df)))
+    M = np.array(M).T
+
 
     end = time.time()
 
@@ -142,9 +143,8 @@ def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
     df = np.linspace(-BW/2, BW/2, num=1000)
 
-    for n in range(len(t)):
-        for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df[f]/Gamma], angle)
+    M = Parallel(n_jobs=-1)(delayed(parallel_rotate_hard)(M[:, f], t, RF, Gamma, angle, dt, df[f]) for f in range(len(df)))
+    M = np.array(M).T
 
     end = time.time()
 
@@ -157,3 +157,16 @@ def gaussian(x, mu, sig):
     return (
         1.0 / (np.sqrt(2.0 * np.pi) * sig) * np.exp(-np.power((x - mu) / sig, 2.0) / 2)
     )
+
+def parallel_rotate_hard(M_f, t, RF, Gamma, angle, dt, df_f):
+    for n in range(len(t)):
+            M_f  = bloch_rotate(M_f, dt, [np.real(RF[0, n]), np.imag(RF[0, n]), df_f/Gamma], angle)
+
+    return M_f
+
+def parallel_rotate_shape(M_f, t, RF, Gamma, angle, dt, df_f):
+    for n in range(len(t)):
+            M_f  = bloch_rotate(M_f, dt, [np.real(RF[n]), np.imag(RF[n]), df_f/Gamma], angle)
+
+    return M_f
+    
