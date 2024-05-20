@@ -6,7 +6,7 @@ from bloch import bloch_rotate
 from file_import import import_file
 from rotation import Rot
 
-def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, Gamma):
+def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma):
 
     ## shaped pulse calculator
     """
@@ -45,9 +45,8 @@ def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, Gamma):
         RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt) * 2
     else:
         RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt)
-
     for n in range(N_init, N_init + N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), 0], angle)
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), phi/Gamma], angle)
 
 
     N_final = N_init + N
@@ -125,7 +124,7 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
 
 
 
-def plot_3D_arrow_figure(M, N):
+def plot_3D_arrow_figure(M_1, M_2, N):
 
     ## 3D arrow motion plot simulator
     """
@@ -141,7 +140,7 @@ def plot_3D_arrow_figure(M, N):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    def get_arrow(i):
+    def get_arrow(M, i):
         # drawing the arrow of vector M for each time point
             x = 0
             y = 0
@@ -150,7 +149,7 @@ def plot_3D_arrow_figure(M, N):
             v = M[1, i]
             w = M[2, i]
             return x, y, z, u, v, w
-
+    """
     global quiver, num_phi, num_theta
 
     quiver = ax.quiver(*get_arrow(0))
@@ -166,6 +165,46 @@ def plot_3D_arrow_figure(M, N):
     radius = 1
     num_phi=20
     num_theta=20
+
+    phi = np.linspace(0, 2 * np.pi, num_phi)
+    theta = np.linspace(0, np.pi, num_theta)
+
+    phi, theta = np.meshgrid(phi, theta)
+    x = radius * np.sin(theta) * np.cos(phi)
+    y = radius * np.sin(theta) * np.sin(phi)
+    z = radius * np.cos(theta)
+
+    ax.plot_surface(x, y, z, color='k', alpha=0.05, edgecolors='k', linewidth=0.1)
+
+    # axis condition
+    ax.set_xlim(-1.5, 1.5)
+    ax.set_ylim(-1.5, 1.5)
+    ax.set_zlim(-1.5, 1.5)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    ani = FuncAnimation(fig, update, frames=range(N), interval=1)
+    plt.show()
+    """
+    global num_phi, num_theta
+
+    quiver1 = ax.quiver(*get_arrow(M_1, 0), color='r')
+    quiver2 = ax.quiver(*get_arrow(M_2, 0), color='b')
+
+    def update(frame):
+        # updating each quiver for time point
+        nonlocal quiver1, quiver2
+        quiver1.remove()
+        quiver2.remove()
+        quiver1 = ax.quiver(*get_arrow(M_1, frame), pivot='tail', color='r')
+        quiver2 = ax.quiver(*get_arrow(M_2, frame), pivot='tail', color='b')
+        ax.set_title(f'Time: {frame} milliseconds')
+
+    # Plotting radius 1 sphere surface
+    radius = 1
+    num_phi = 20
+    num_theta = 20
 
     phi = np.linspace(0, 2 * np.pi, num_phi)
     theta = np.linspace(0, np.pi, num_theta)
