@@ -36,6 +36,8 @@ def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, Gamma):
         xy_temp = np.zeros((2, 1), dtype=float)
         xy_temp = Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
         RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
+
+    pul_type = ""
     if (max(xy_array[:,1])>=350):
         pul_type = "adiabatic"
     RF = xy_array[:, 0] * RF_array[:, 1]
