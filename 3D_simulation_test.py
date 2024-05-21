@@ -33,6 +33,10 @@ M_equilibrium = np.array([0, 0, M0])
 M = np.tile(M_equilibrium, (2020, 1)).T
 M = M.astype(float)
 M_2, N_2 = sim_import_shaped_pulse(M, flip, angle, t_max_1, file_path, N_0, 0.8, Gamma)
+M_equilibrium = np.array([0, 0, M0])
+M = np.tile(M_equilibrium, (2020, 1)).T
+M = M.astype(float)
+M_3, N_2 = sim_import_shaped_pulse(M, flip, angle, t_max_1, file_path, N_0, -0.8, Gamma)
 
 
 flip = np.pi
@@ -44,7 +48,7 @@ angle = "x"
 
 #M, N_3 = sim_import_shaped_pulse(M, flip, angle, t_max_3, file_path, N_2, Gamma)
 
-ani = plot_3D_arrow_figure(M_1, M_2, N_1)
+ani = plot_3D_arrow_figure(M_1, M_2, M_3, N_1)
 
 
 #save_animation_to_gif(ani, 'animation_5.gif') # save the animation to gif file 

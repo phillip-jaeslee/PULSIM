@@ -124,12 +124,12 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
 
 
 
-def plot_3D_arrow_figure(M_1, M_2, N):
+def plot_3D_arrow_figure(M_1, M_2, M_3, N):
 
     ## 3D arrow motion plot simulator
     """
     ani = plot_3D_arrow_figure(M, N)
-    parameters 
+    parameters  
     input:
     M               - magnetization vector by time
     N               - the number of points of the pulse
@@ -191,14 +191,18 @@ def plot_3D_arrow_figure(M_1, M_2, N):
 
     quiver1 = ax.quiver(*get_arrow(M_1, 0), color='r')
     quiver2 = ax.quiver(*get_arrow(M_2, 0), color='b')
+    quiver3 = ax.quiver(*get_arrow(M_3, 0), color='g')
+
 
     def update(frame):
         # updating each quiver for time point
-        nonlocal quiver1, quiver2
+        nonlocal quiver1, quiver2, quiver3
         quiver1.remove()
         quiver2.remove()
+        quiver3.remove()
         quiver1 = ax.quiver(*get_arrow(M_1, frame), pivot='tail', color='r')
         quiver2 = ax.quiver(*get_arrow(M_2, frame), pivot='tail', color='b')
+        quiver3 = ax.quiver(*get_arrow(M_3, frame), pivot='tail', color='g')
         ax.set_title(f'Time: {frame} milliseconds')
 
     # Plotting radius 1 sphere surface
