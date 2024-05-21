@@ -18,25 +18,25 @@ def run_simulation(time_temp):
     M = np.tile(M_equilibrium, (len(df), 1)).T
     M = M.astype(float)
 
-    df_temp = np.ndarray(shape=(1, 1, 1000))
-    RF_temp = np.ndarray(shape=(1, 1, N))
-    t_max_temp = np.ndarray(shape=(1, 1, N))
+    df_temp = np.ndarray(shape=(3, 1, 1000))
+    RF_temp = np.ndarray(shape=(3, 1, N))
+    t_max_temp = np.ndarray(shape=(3, 1, N))
     file_path = 'wave/GaussCascadeQ5'
 
     # shaped Pulse (sine)
     i = 0
     print(f'first pulse "{file_path}" running...')
-    M, df_temp[i], RF_temp[i], t_max_temp[i], N = import_shaped_pulse(M, np.pi / 2, "x", time_temp / 10, file_path, BW, Gamma)
+    M, df_temp[i], RF_temp[i], t_max_temp[i], N = sc_import_shaped_pulse(M, np.pi / 2, "x", time_temp / 10, file_path, BW, Gamma)
     
     # hard Pulse
     i += 1
     print("second pulse running...")
-    M, df_temp[i], RF_temp[i], t_max_temp[i], N = hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
+    M, df_temp[i], RF_temp[i], t_max_temp[i], N = sc_hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
 
     # shaped Pulse (sine)
     i += 1
     print(f'third pulse "{file_path}" running...')
-    M, df_temp[i], RF_temp[i], t_max_temp[i], N = import_shaped_pulse(M, np.pi / 2, "x", time_temp / 10, file_path, BW, Gamma)
+    M, df_temp[i], RF_temp[i], t_max_temp[i], N = sc_import_shaped_pulse(M, np.pi / 2, "x", time_temp / 10, file_path, BW, Gamma)
     
     # Return the z-component of the magnetization (Mz)
     return M
