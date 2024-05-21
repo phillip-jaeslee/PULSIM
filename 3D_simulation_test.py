@@ -14,13 +14,15 @@ M_equilibrium = np.array([0, 0, M0])
 
 t_max_1 = 1
 t_max_2 = 0.020
-t_max_3 = 0.6
-#N = int((t_max_1 + t_max_2 + t_max_3) * 1000)
+t_max_3 = 1
+N = int((t_max_1 + t_max_2 + t_max_3) * 1000)
 
-file_path = 'wave/GaussCascadeQ5'
 
 N_0 = 0
 
+num_arrows = 20
+Ms = np.ndarray((num_arrows, 3, N))
+
 
 M = np.tile(M_equilibrium, (2020, 1)).T
 M = M.astype(float)
@@ -28,27 +30,18 @@ M = M.astype(float)
 flip = np.pi
 angle = "x"
 
-M_1, N_1 = sim_import_shaped_pulse(M, flip, angle, t_max_1, file_path, N_0, 0, Gamma)
-M_equilibrium = np.array([0, 0, M0])
-M = np.tile(M_equilibrium, (2020, 1)).T
-M = M.astype(float)
-M_2, N_2 = sim_import_shaped_pulse(M, flip, angle, t_max_1, file_path, N_0, 0.8, Gamma)
-M_equilibrium = np.array([0, 0, M0])
-M = np.tile(M_equilibrium, (2020, 1)).T
-M = M.astype(float)
-M_3, N_2 = sim_import_shaped_pulse(M, flip, angle, t_max_1, file_path, N_0, -0.8, Gamma)
+j = 0
+
+for i in range(20):
+    j = (i - 10) / 20
+    file_path = 'wave/GaussCascadeQ5'
+    Ms[i], N_1 = sim_import_shaped_pulse(M, np.pi/2, angle, t_max_1, file_path, N_0, j , Gamma)
+    Ms[i], N_2 = sim_hard_pulse(Ms[i], np.pi, angle, t_max_2, N_1, int(t_max_2 * 1000), j, Gamma)
+    file_path = 'wave/GaussCascadeQ5_rev'    
+    Ms[i], N_3 = sim_import_shaped_pulse(Ms[i], np.pi/2, angle, t_max_3, file_path, N_2, j , Gamma)
 
 
-flip = np.pi
-#M, N_2 = sim_hard_pulse(M, flip, angle, t_max_2, N_1, int(t_max_2 * 1000), Gamma)
-
-
-flip = np.pi /2
-angle = "x"
-
-#M, N_3 = sim_import_shaped_pulse(M, flip, angle, t_max_3, file_path, N_2, Gamma)
-
-ani = plot_3D_arrow_figure(M_1, M_2, M_3, N_1)
+ani = plot_3D_arrow_figure(Ms, num_arrows, N)
 
 
 #save_animation_to_gif(ani, 'animation_5.gif') # save the animation to gif file 

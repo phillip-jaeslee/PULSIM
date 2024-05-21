@@ -54,7 +54,7 @@ def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma
     return M, N_final
 
 
-def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
+def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, phi, Gamma):
 
     ## shaped pulse simulator
     """
@@ -86,13 +86,13 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, Gamma):
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
     for n in range(N_init, N_init + N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), 0], angle)
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), phi/Gamma], angle)
 
     N_final = N + N_init
 
     return M, N_final
 
-def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
+def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
 
     ## hard pulse simulator
     """
@@ -116,7 +116,7 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
     RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
     for n in range(N_init, N_init + N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n-N_init]), np.imag(RF[0, n-N_init]), 0], angle)
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n-N_init]), np.imag(RF[0, n-N_init]), phi/Gamma], angle)
 
     N_final = N + N_init
 
@@ -124,7 +124,8 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, Gamma):
 
 
 
-def plot_3D_arrow_figure(M_1, M_2, M_3, N):
+def plot_3D_arrow_figure(Ms, num_arrows, N):
+    
 
     ## 3D arrow motion plot simulator
     """
@@ -140,75 +141,34 @@ def plot_3D_arrow_figure(M_1, M_2, M_3, N):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    def get_arrow(M, i):
+    def get_arrow(Ms, frame):
         # drawing the arrow of vector M for each time point
             x = 0
             y = 0
             z = 0
-            u = M[0, i]
-            v = M[1, i]
-            w = M[2, i]
+            u, v, w= Ms[:, frame]
             return x, y, z, u, v, w
-    """
-    global quiver, num_phi, num_theta
 
-    quiver = ax.quiver(*get_arrow(0))
-
-    def update(frame):
-        # updating the each quiver for time point
-        global quiver
-        quiver.remove()
-        quiver = ax.quiver(*get_arrow(frame), pivot='tail', color='r')
-        ax.set_title(f'Time: {frame * 1} miliseconds')
-
-    # Plotting radius 1 sphere surface
-    radius = 1
-    num_phi=20
-    num_theta=20
-
-    phi = np.linspace(0, 2 * np.pi, num_phi)
-    theta = np.linspace(0, np.pi, num_theta)
-
-    phi, theta = np.meshgrid(phi, theta)
-    x = radius * np.sin(theta) * np.cos(phi)
-    y = radius * np.sin(theta) * np.sin(phi)
-    z = radius * np.cos(theta)
-
-    ax.plot_surface(x, y, z, color='k', alpha=0.05, edgecolors='k', linewidth=0.1)
-
-    # axis condition
-    ax.set_xlim(-1.5, 1.5)
-    ax.set_ylim(-1.5, 1.5)
-    ax.set_zlim(-1.5, 1.5)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    ani = FuncAnimation(fig, update, frames=range(N), interval=1)
-    plt.show()
-    """
     global num_phi, num_theta
-
-    quiver1 = ax.quiver(*get_arrow(M_1, 0), color='r')
-    quiver2 = ax.quiver(*get_arrow(M_2, 0), color='b')
-    quiver3 = ax.quiver(*get_arrow(M_3, 0), color='g')
+    
+    quivers = [ax.quiver(*get_arrow(Ms[i], 0)) for i in range(num_arrows)]
 
 
     def update(frame):
         # updating each quiver for time point
-        nonlocal quiver1, quiver2, quiver3
-        quiver1.remove()
-        quiver2.remove()
-        quiver3.remove()
-        quiver1 = ax.quiver(*get_arrow(M_1, frame), pivot='tail', color='r')
-        quiver2 = ax.quiver(*get_arrow(M_2, frame), pivot='tail', color='b')
-        quiver3 = ax.quiver(*get_arrow(M_3, frame), pivot='tail', color='g')
+        nonlocal quivers 
+
+        for quiver in quivers:
+            quiver.remove()
+
+        quivers = [ax.quiver(*get_arrow(Ms[i], frame), pivot='tail') for i in range(num_arrows)]
+
         ax.set_title(f'Time: {frame} milliseconds')
 
     # Plotting radius 1 sphere surface
     radius = 1
-    num_phi = 20
-    num_theta = 20
+    num_phi = 21
+    num_theta = 21
 
     phi = np.linspace(0, 2 * np.pi, num_phi)
     theta = np.linspace(0, np.pi, num_theta)
