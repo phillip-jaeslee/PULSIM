@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
+from matplotlib import cm
 from bloch import bloch_rotate
 from file_import import import_file
 from rotation import Rot
@@ -141,6 +142,10 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
+    # Generate base colors from a colormap
+    cmap = cm.get_cmap('magma', num_arrows)
+    base_colors = [cmap(i) for i in range(num_arrows)]
+
     def get_arrow(Ms, frame):
         # drawing the arrow of vector M for each time point
             x = 0
@@ -151,7 +156,7 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
 
     global num_phi, num_theta
     
-    quivers = [ax.quiver(*get_arrow(Ms[i], 0)) for i in range(num_arrows)]
+    quivers = [ax.quiver(*get_arrow(Ms[i], 0), color=base_colors[i]) for i in range(num_arrows)]
 
 
     def update(frame):
@@ -161,7 +166,7 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
         for quiver in quivers:
             quiver.remove()
 
-        quivers = [ax.quiver(*get_arrow(Ms[i], frame), pivot='tail') for i in range(num_arrows)]
+        quivers = [ax.quiver(*get_arrow(Ms[i], frame), pivot='tail', color=base_colors[i]) for i in range(num_arrows)]
 
         ax.set_title(f'Time: {frame} milliseconds')
 

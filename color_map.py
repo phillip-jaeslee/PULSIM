@@ -2,7 +2,7 @@ import numpy as np
 import numpy.matlib 
 from bloch import bloch_rotate
 import matplotlib.pyplot as plt
-from pulse import shaped_pulse, hard_pulse, import_shaped_pulse
+from pulse import shaped_pulse, hard_pulse, import_shaped_pulse, sc_import_shaped_pulse, sc_shaped_pulse, sc_hard_pulse
 from joblib import Parallel, delayed
 
 def run_simulation(time_temp):
