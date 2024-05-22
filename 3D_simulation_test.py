@@ -20,7 +20,7 @@ N = int((t_max_1 + t_max_2 + t_max_3) * 1000)
 
 N_0 = 0
 
-num_arrows = 20
+num_arrows = 50
 Ms = np.ndarray((num_arrows, 3, N))
 
 
@@ -32,12 +32,12 @@ angle = "x"
 
 j = 0
 
-for i in range(20):
-    j = (i - 10) / 20
+for i in range(num_arrows):
+    j = (i - num_arrows/2) / num_arrows * np.pi
     file_path = 'wave/GaussCascadeQ5'
     Ms[i], N_1 = sim_import_shaped_pulse(M, np.pi/2, angle, t_max_1, file_path, N_0, j , Gamma)
     Ms[i], N_2 = sim_hard_pulse(Ms[i], np.pi, angle, t_max_2, N_1, int(t_max_2 * 1000), j, Gamma)
-    file_path = 'wave/GaussCascadeQ5_rev'    
+    #file_path = 'wave/GaussCascadeQ5_rev'    
     Ms[i], N_3 = sim_import_shaped_pulse(Ms[i], np.pi/2, angle, t_max_3, file_path, N_2, j , Gamma)
 
 
