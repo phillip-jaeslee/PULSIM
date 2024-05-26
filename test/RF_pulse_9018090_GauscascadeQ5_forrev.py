@@ -20,7 +20,7 @@ M = M.astype(float)
 df_temp = np.ndarray(shape=(3, 1, 1000))
 RF_temp = np.ndarray(shape=(3, 1, N))
 t_max_temp = np.ndarray(shape=(3, 1, N))
-file_path = 'wave/GaussCascadeQ5'
+file_path = '../wave/GaussCascadeQ5'
 
 
 # shaped Pulse (sine)
