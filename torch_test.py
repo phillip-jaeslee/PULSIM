@@ -33,6 +33,9 @@ def bloch_rotate(M_init, T, B, angle):
     eta = torch.acos(B[:, 2] / (torch.norm(B, dim=1) + torch.finfo(torch.float32).eps))
     theta = torch.atan2(B[:, 1], B[:, 0])
 
+    # torch.permute (2, 0, 1) = change the order of dimension
+    # torch.bmm = matrix multiplication (not available for broadcast)
+
     if angle == "x":
         R = torch.bmm(Rz(-theta).permute(2, 0, 1), Ry(-eta).permute(2, 0, 1))
         R = torch.bmm(R, Rz(flip).permute(2, 0, 1))
@@ -71,11 +74,15 @@ def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     df = torch.linspace(-BW / 2, BW / 2, steps=1000, device=device)
 
     # Expand dimensions to align properly for stacking
+    # tensor.expand = repeating the tensor (-1 without changing dimension)
     RF_expanded = RF.expand(len(df), -1)
     zeros_expanded = torch.zeros(len(df), N, device=device)
     df_expanded = df[:, None].expand(-1, N) / Gamma
 
+    # B = [RF, 0, df]
     B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
+
+    print(len(t))
 
     for n in range(len(t)):
         M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
