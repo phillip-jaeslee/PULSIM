@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from rotation import Rx, Ry, Rz
 
@@ -50,23 +51,37 @@ class bloch :
     M_final : final magnetization
     angle   : flip angle among coordinates (x, y, z)
     """
+def bloch_rotate(M_init, T, B, angle):
+    Gamma = 42.58  # kHz/mT MHz/T
+    flip = 2 * torch.pi * Gamma * torch.norm(B, dim=1) * T
+    eta = torch.acos(B[:, 2] / (torch.norm(B, dim=1) + torch.finfo(torch.float32).eps))
+    theta = torch.atan2(B[:, 1], B[:, 0])
 
-    def bloch_rotate(M_init, T, B, angle):
-        Gamma = 42.58  # kHz/mT MHz/T
-        flip = 2*np.pi* Gamma * np.linalg.norm(B) * T
-        eta = np.arccos(B[2] / (np.linalg.norm(B) +np.finfo(np.float64).eps))
-        theta = np.arctan2(B[1], B[0])
-        if angle == "x":
-            M_final = Rz(-theta)@Ry(-eta)@Rz(flip)@Ry(eta)@Rz(theta) @ M_init
-        elif angle == "y":
-            M_final = Rx(-theta)@Rz(-eta)@Rx(flip)@Rz(eta)@Rx(theta) @ M_init
-        elif angle == "z":
-            M_final = Ry(-theta)@Rx(-eta)@Ry(flip)@Rx(eta)@Ry(theta) @ M_init
-        else:
-            raise ValueError(f'Failed to run the proper bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
+    # torch.permute (2, 0, 1) = change the order of dimension
+    # torch.bmm = matrix multiplication (not available for broadcast)
 
-        return M_final
+    if angle == "x":
+        R = torch.bmm(Rz(-theta).permute(2, 0, 1), Ry(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, Rz(flip).permute(2, 0, 1))
+        R = torch.bmm(R, Ry(eta).permute(2, 0, 1))
+        R = torch.bmm(R, Rz(theta).permute(2, 0, 1))
+    elif angle == "y":
+        R = torch.bmm(Rx(-theta).permute(2, 0, 1), Rz(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, Rx(flip).permute(2, 0, 1))
+        R = torch.bmm(R, Rz(eta).permute(2, 0, 1))
+        R = torch.bmm(R, Rx(theta).permute(2, 0, 1))
+    elif angle == "z":
+        R = torch.bmm(Ry(-theta).permute(2, 0, 1), Rx(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, Ry(flip).permute(2, 0, 1))
+        R = torch.bmm(R, Rx(eta).permute(2, 0, 1))
+        R = torch.bmm(R, Ry(theta).permute(2, 0, 1))
+    else:
+        raise ValueError(f'Failed to run the proper Bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
 
+    # Convert M_init to the appropriate data type before the bmm operation
+    M_init = M_init.to(torch.float32)
+
+    return torch.bmm(R, M_init.unsqueeze(2)).squeeze(2)
     ## Bloch rotation
     # calculation of Bloch rotation
     """
