@@ -92,48 +92,48 @@ def bloch_rotate(M_init, T, B, angle):
     M_final : final magnetization
     """
 
-    def bloch_rftip(M_init, T, B1):
+def bloch_rftip(M_init, T, B1):
 
-        M_final = bloch_rotate(M_init, T, [np.real(B1), np.imag(B1), 0])
+    M_final = bloch_rotate(M_init, T, [np.real(B1), np.imag(B1), 0])
 
-        return M_final
+    return M_final
 
 
-    ### Bloch_simulation
-    # compute Bloch simulation for a pulse sequence
-    """
-    % INPUTS
-    %	Mstart - initial magnetization
-    %	dt - time step between points in B1 and G [ms] 
-    %	B1 - RF vector, B1X + i B1Y [mT], defined at each time point in T
-    %	G - Gradient field vector [mT/m], defined for Gx,Gy, and Gz at each time point in T
-    %	M0 - equilibrium magnetization (default = 1)
-    %	T1 - longitudinal relaxation time [ms]
-    %	T2 - transverse relaxation time [ms]
-    %	r - positions at which to evaluate simulation [m]  (JUST POSITION)
-    %	df - off-resonance frequencies to evaluate simulation [kHz] (JUST one off-resonance)
-    % OUTPUTS
-    %   Mall - magnetization
-    """
+### Bloch_simulation
+# compute Bloch simulation for a pulse sequence
+"""
+% INPUTS
+%	Mstart - initial magnetization
+%	dt - time step between points in B1 and G [ms] 
+%	B1 - RF vector, B1X + i B1Y [mT], defined at each time point in T
+%	G - Gradient field vector [mT/m], defined for Gx,Gy, and Gz at each time point in T
+%	M0 - equilibrium magnetization (default = 1)
+%	T1 - longitudinal relaxation time [ms]
+%	T2 - transverse relaxation time [ms]
+%	r - positions at which to evaluate simulation [m]  (JUST POSITION)
+%	df - off-resonance frequencies to evaluate simulation [kHz] (JUST one off-resonance)
+% OUTPUTS
+%   Mall - magnetization
+"""
 
-    def bloch_simulation(M_init, dt, B1, G, M0, T1, T2, r, df):
-        Nt = max(B1.shape)
-        M_all = np.zeors(3, Nt)
+def bloch_simulation(M_init, dt, B1, G, M0, T1, T2, r, df):
+    Nt = max(B1.shape)
+    M_all = np.zeors(3, Nt)
 
-        for i in range(1, Nt):
-            if i == 1:
-                M_temp1 = M_init
-            else:
-                M_temp1 = M_all[:, i-1]
-            
-            M_temp2 = bloch_rotate(M_temp1, dt, [np.real(B1[i]), np.imag(B1[i]), G[:,i]*r + df])
+    for i in range(1, Nt):
+        if i == 1:
+            M_temp1 = M_init
+        else:
+            M_temp1 = M_all[:, i-1]
+        
+        M_temp2 = bloch_rotate(M_temp1, dt, [np.real(B1[i]), np.imag(B1[i]), G[:,i]*r + df])
 
-            M_all[:, i] = bloch_relax(M_temp2, dt, M0, T1, T2)
+        M_all[:, i] = bloch_relax(M_temp2, dt, M0, T1, T2)
 
-        return M_all
+    return M_all
 
-    def spoil_magnetization(M_init):
-        M_final = M_init
-        M_final[1:-1, :] = 0
+def spoil_magnetization(M_init):
+    M_final = M_init
+    M_final[1:-1, :] = 0
 
-        return M_final
+    return M_final

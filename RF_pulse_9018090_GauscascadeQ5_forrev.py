@@ -11,42 +11,43 @@ Gamma = 42.58 # kHz/mT
 M0 = 1
 M_equilibrium = np.array([0, 0, M0])
 BW = 8 # kHz
-df = np.linspace(-BW/2, BW/2, num=1000)
 N = 1000
+df = np.linspace(-BW/2, BW/2, num=N)
 
 M = np.tile(M_equilibrium, (len(df), 1)).T
 M = M.astype(float)
 
-df_temp = np.ndarray(shape=(3, 1, 1000))
+df_temp = np.ndarray(shape=(3, 1, N))
 RF_temp = np.ndarray(shape=(3, 1, N))
 t_max_temp = np.ndarray(shape=(3, 1, N))
+Ns = np.ndarray(shape=(3, 1))
 file_path = 'wave/GaussCascadeQ5'
 
 
 # shaped Pulse (sine)
 i = 0
 print(f'first pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i], N_t =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
 
 # hard Pulse
 i += 1
 print("second pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i], N_t = sc_hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] = sc_hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
 
 
 file_path = 'wave/GaussCascadeQ5'
 # shaped Pulse (sine)
 i += 1
 print(f'thrid pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i], N_t =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
 
 
 RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
 RF_t = np.append(RF_t, RF_temp[2, :, :])
 
-t_1 = np.arange(0, N, 1) * t_max_temp[0] / N
-t_2 = np.arange(0, N, 1) * t_max_temp[1] / N + t_max_temp[0]
-t_3 = np.arange(0, N, 1) * t_max_temp[2] / N + t_max_temp[0] + t_max_temp[1]
+t_1 = np.arange(0, Ns[0], 1) * t_max_temp[0] / Ns[0]
+t_2 = np.arange(0, Ns[1], 1) * t_max_temp[1] / Ns[1] + t_max_temp[0]
+t_3 = np.arange(0, Ns[2], 1) * t_max_temp[2] / Ns[2] + t_max_temp[0] + t_max_temp[1]
 
 t = np.append(t_1, t_2)
 t = np.append(t, t_3)
