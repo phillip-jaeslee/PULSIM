@@ -191,26 +191,31 @@ def sc_import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
     RF_real = torch.cos(angles)
     RF_imag = torch.sin(angles)
     RF_array = torch.complex(magnitudes * RF_real, magnitudes * RF_imag)
-    
-    if (max(xy_array[:,1])>=350):
-        pul_type = "adiabatic"
-    RF = xy_array[:, 0] * RF_array[:, 1]
-    if (pul_type == "adiabatic"):
-        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt) * 2
-    else:
-        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt)
 
-    df = np.linspace(-BW/2, BW/2, num=1000)
+    pul_type = "adiabatic" if (max(xy_array[:,1])>=350) else ""
+    RF = RF_array
+    RF = (flip) * RF/ torch.sum(RF) / (2*torch.pi*Gamma*dt)
+    if pul_type == "adiabatic":
+        RF *= 2
 
+    df = torch.linspace(-BW/2, BW/2, steps=1000, dtype=torch.float32, device=device)
+
+    M = torch.tensor(M, dtype=torch.float32, device=device)
+
+    RF_real_expanded = RF.real.expand(len(df), -1)
+    RF_imag_expanded = RF.imag.expand(len(df), -1)
+    df_expanded = df[:, None].expand(-1, N) / Gamma
+
+    B = torch.stack([RF_real_expanded, RF_imag_expanded, df_expanded], dim=2)
+    print(B)
     for n in range(len(t)):
-        for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
+        M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
 
     end = time.time()
 
     print('elapsed time: {} sec'.format(end-start) )
 
-    return M, df, RF, t_max, N
+    return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), t_max, N
 
 def sc_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
@@ -236,40 +241,56 @@ def sc_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
     t               - time array of the pulse
     t_max           - duration of pulse (need to be stored to plot the pulse diagram)
     """
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    M = torch.tensor(M, dtype=torch.float32, device=device)
+
     dt = t_max / N
     init = -N/2
     final = N/2
-    t = np.arange(init, final, 1) * dt
+    t = torch.arange(init, final, dtype=torch.float32, device=device) * dt
     if shape == "sinc":
-        RF = np.hamming(N).T  * np.sinc(t)
+        RF = torch.hamming_window(N, dtype=torch.float32, device=device).T  * torch.sinc(t)
     elif shape == "cos":
-        RF = np.cos(np.pi / t_max * t)
+        RF = torch.cos(torch.pi / t_max * t)
     elif shape == "gauss":
         RF = gaussian(t, 0, 1/7)
     elif shape == "sinc2p":
-        RF = np.sinc(np.pi*t)
+        RF = torch.sinc(torch.pi*t)
     else:
         raise ValueError(f'Failed to run the proper bloch rotation with "{shape}".')
-    RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
+    RF = (flip) * RF/torch.sum(RF) / (2*torch.pi*Gamma*dt)
 
-    df = np.linspace(-BW/2, BW/2, num=1000)
+    df = torch.linspace(-BW/2, BW/2, steps=1000, dtype=torch.float32, device=device)
 
+    # Expand dimensions to align properly for stacking
+    # tensor.expand = repeating the tensor (-1 without changing dimension)
+    RF_expanded = RF.expand(len(df), -1)
+    zeros_expanded = torch.zeros(len(df), N, device=device)
+    df_expanded = df[:, None].expand(-1, N) / Gamma
+
+    # B = [RF, 0, df]
+    B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
+
+    print(len(t))
 
     for n in range(len(t)):
-        for f in range(len(df)):
-            M[:, f]  = bloch_rotate(M[:, f], dt, [np.real(RF[n]), np.imag(RF[n]), df[f]/Gamma], angle)
+        M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
 
     end = time.time()
 
     print('elapsed time: {} sec'.format(end-start) )
 
-    return M, df, RF, t_max, N
+    return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), t_max, N
 
 def sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     start = time.time()
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Convert inputs to torch tensors and move to device
-    M = M.clone().detach().to(device)
+    M = torch.tensor(M, dtype=torch.float32, device=device)
     dt = t_max / N
     init = -N / 2
     final = N / 2
@@ -287,8 +308,6 @@ def sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     # B = [RF, 0, df]
     B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
 
-    print(len(t))
-
     for n in range(len(t)):
         M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
 
@@ -300,7 +319,7 @@ def sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
 
 def gaussian(x, mu, sig):
     return (
-        1.0 / (np.sqrt(2.0 * np.pi) * sig) * np.exp(-np.power((x - mu) / sig, 2.0) / 2)
+        1.0 / (torch.sqrt(2.0 * torch.pi) * sig) * torch.exp(-torch.pow((x - mu) / sig, 2.0) / 2)
     )
 
 def parallel_rotate_hard(M_f, t, RF, Gamma, angle, dt, df_f):
