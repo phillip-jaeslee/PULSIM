@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from matplotlib import cm
-from bloch import bloch_rotate
-from file_import import import_file
-from rotation import Rot
+from .bloch import bloch_rotate
+from .file_import import import_file
+from .rotation import Rot
 
 def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma):
 

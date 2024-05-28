@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.matlib 
-from bloch import bloch_rotate
+from PULSIM.bloch import bloch_rotate
 import matplotlib.pyplot as plt
-from pulse import shaped_pulse, hard_pulse, import_shaped_pulse
+from PULSIM.pulse import shaped_pulse, hard_pulse, import_shaped_pulse
 
 
 global Gamma, BW
@@ -34,7 +34,7 @@ print("second pulse running...")
 M, df_temp[i], RF_temp[i], t_max_temp[i], N_t = hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
 
 
-file_path = 'wave/GaussCascadeQ5_rev'
+file_path = '../wave/GaussCascadeQ5_rev'
 # shaped Pulse (sine)
 i += 1
 print(f'thrid pulse "{file_path}" running...')

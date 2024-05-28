@@ -1,8 +1,8 @@
 import time
 import numpy as np
-from rotation import Rot
-from bloch import bloch_rotate
-from file_import import import_file, read_xy_points
+from .rotation import Rot
+from .bloch import bloch_rotate
+from .file_import import import_file, read_xy_points
 from joblib import Parallel, delayed
 
 
