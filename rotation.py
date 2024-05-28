@@ -1,5 +1,5 @@
 import torch
-import numpy as np
+
 
 ## Rotation operator
 # theta : radian degree

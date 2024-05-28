@@ -204,7 +204,9 @@ def sc_import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
 
     RF_real_expanded = RF.real.expand(len(df), -1)
     RF_imag_expanded = RF.imag.expand(len(df), -1)
-    df_expanded = df[:, None].expand(-1, N) / Gamma
+    df_expanded = df[:, None].expand(-1, 1000) / Gamma
+
+    
 
     B = torch.stack([RF_real_expanded, RF_imag_expanded, df_expanded], dim=2)
     print(B)
@@ -268,7 +270,7 @@ def sc_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
     # tensor.expand = repeating the tensor (-1 without changing dimension)
     RF_expanded = RF.expand(len(df), -1)
     zeros_expanded = torch.zeros(len(df), N, device=device)
-    df_expanded = df[:, None].expand(-1, N) / Gamma
+    df_expanded = df[:, None].expand(-1, 1000) / Gamma
 
     # B = [RF, 0, df]
     B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
@@ -287,6 +289,28 @@ def sc_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 def sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     start = time.time()
 
+    ## hard pulse calculator (single core)
+
+
+    """
+    M, df, RF, t_max, N = sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma)
+    parameters 
+    input:
+    M               - magnetization vector 
+    N               - the number of points of the pulse
+    dt              - size of each step
+    angle           - flip angle position (x, y, z)
+    flip            - flip angle (rad)
+    t_max           - duration of pulse
+    BW              - bandwith (kHz)
+    output:
+    M               - final magnetization vector
+    df              - bandwith array of the pulse
+    RF              - pulse shape array
+    t_max           - duration of pulse (need to be stored to plot the pulse diagram)
+    N               - the number of points of the pulse
+    """    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Convert inputs to torch tensors and move to device
@@ -303,7 +327,7 @@ def sc_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
     # tensor.expand = repeating the tensor (-1 without changing dimension)
     RF_expanded = RF.expand(len(df), -1)
     zeros_expanded = torch.zeros(len(df), N, device=device)
-    df_expanded = df[:, None].expand(-1, N) / Gamma
+    df_expanded = df[:, None].expand(-1, 1000) / Gamma
 
     # B = [RF, 0, df]
     B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
