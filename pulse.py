@@ -209,7 +209,6 @@ def sc_import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma) :
     
 
     B = torch.stack([RF_real_expanded, RF_imag_expanded, df_expanded], dim=2)
-    print(B)
     for n in range(len(t)):
         M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
 
@@ -275,7 +274,6 @@ def sc_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
     # B = [RF, 0, df]
     B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
 
-    print(len(t))
 
     for n in range(len(t)):
         M = bloch_rotate(M.T, dt, B[:, n, :], angle).T
