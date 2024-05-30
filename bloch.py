@@ -51,7 +51,35 @@ class bloch :
     M_final : final magnetization
     angle   : flip angle among coordinates (x, y, z)
     """
+
 def bloch_rotate(M_init, T, B, angle):
+    Gamma = 42.58  # kHz/mT MHz/T
+    flip = 2*np.pi* Gamma * np.linalg.norm(B) * T
+    eta = np.arccos(B[2] / (np.linalg.norm(B) +np.finfo(np.float64).eps))
+    theta = np.arctan2(B[1], B[0])
+    if angle == "x":
+        M_final = Rz(-theta)@Ry(-eta)@Rz(flip)@Ry(eta)@Rz(theta) @ M_init
+    elif angle == "y":
+        M_final = Rx(-theta)@Rz(-eta)@Rx(flip)@Rz(eta)@Rx(theta) @ M_init
+    elif angle == "z":
+        M_final = Ry(-theta)@Rx(-eta)@Ry(flip)@Rx(eta)@Ry(theta) @ M_init
+    else:
+        raise ValueError(f'Failed to run the proper bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
+
+    return M_final
+
+## Bloch rotation
+# calculation of Bloch rotation
+"""
+Parameters
+M_init  : initial magnetization
+T       : duration [ms]
+B1      : RF amplitude, B1X+iB1Y [mT]
+M_final : final magnetization
+"""
+
+
+def torch_bloch_rotate(M_init, T, B, angle):
     Gamma = 42.58  # kHz/mT MHz/T
     flip = 2 * torch.pi * Gamma * torch.norm(B, dim=1) * T
     eta = torch.acos(B[:, 2] / (torch.norm(B, dim=1) + torch.finfo(torch.float32).eps))
