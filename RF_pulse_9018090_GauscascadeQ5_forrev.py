@@ -1,12 +1,14 @@
 import numpy as np
 import numpy.matlib 
-from bloch import bloch_rotate
+from bloch import torch_bloch_rotate
 import matplotlib.pyplot as plt
-from pulse import sc_shaped_pulse, sc_hard_pulse, sc_import_shaped_pulse
+from pulse import *
 
 
 global Gamma, BW
 Gamma = 42.58 # kHz/mT
+
+MULTI = True
 
 M0 = 1
 M_equilibrium = np.array([0, 0, M0])
@@ -27,19 +29,19 @@ file_path = 'wave/GaussCascadeQ5'
 # shaped Pulse (sine)
 i = 0
 print(f'first pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
 
 # hard Pulse
 i += 1
 print("second pulse running...")
-M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] = sc_hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] = torch_pulse.torch_hard_pulse(M, -np.pi, "x", 0.02, N, BW, Gamma)
 
 
 file_path = 'wave/GaussCascadeQ5'
 # shaped Pulse (sine)
 i += 1
 print(f'thrid pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =sc_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi / 2, "x", 3.4, file_path, BW, Gamma)
 
 
 RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])
