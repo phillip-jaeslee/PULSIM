@@ -125,7 +125,7 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
 
 
 
-def plot_3D_arrow_figure(Ms, num_arrows, N):
+def plot_3D_arrow_figure(Ms, num_arrows, N, color):
     
 
     ## 3D arrow motion plot simulator
@@ -138,12 +138,13 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
     output:
     ani             - 3D plotted animation
     """
+
     global fig, ax
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     # Generate base colors from a colormap
-    cmap = cm.get_cmap('magma', num_arrows)
+    cmap = cm.get_cmap(color, num_arrows)
     base_colors = [cmap(i) for i in range(num_arrows)]
 
     def get_arrow(Ms, frame):
