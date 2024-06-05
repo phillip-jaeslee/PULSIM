@@ -52,11 +52,10 @@ class spin_half:
         return torch.add(-Iz(), unity(), alpha=1/2)
     
     # Density matrix
-    def thermal_eq(omgea, T=289.3):
-        h_bar = 1.05457182E-34
-        kB =  1.380649E-23
-        for i in range(len(omega)):
-            sum_omega = -h_bar * omega(i) / kB / T 
-        omega = (-h_bar * omega / kB / T) / sum_omega
-        return torch.exp(omega)
+    def thermal_eq(GAMMA, B0, T=293.7):
+        return torch.add(Iz() * 1/2 * boltzmann_factor(GAMMA, B0, T), unity(), alpha=1/2, dtype=torch.complex128).to(device)
     
+def boltzmann_factor(GAMMA, B0, T=293.7):
+    h_bar = 1.05457182E-34
+    kB =  1.380649E-23
+    return h_bar * GAMMA * B0 / (kB * T) 
