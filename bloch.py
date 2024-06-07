@@ -14,43 +14,43 @@ T2      : transverse relaxation time [ms]
 A_relax : relaxation array
 M_final : final magnetization
 """
-class bloch :
-    def bloch_relax(M_init, T, M0, T1, T2):
-        A_relax = np.array([[np.exp(-T/T2), 0, 0],
-                        [0, np.exp(-T/T2), 0],
-                        [0, 0, np.exp(-T/T1)]])
-        brecover = np.array([0, 0, M0*(1-np.exp(-T/T1))])
-        
 
-        M_final = A_relax * M_init + brecover
+def bloch_relax(M_init, T, M0, T1, T2):
+    A_relax = np.array([[np.exp(-T/T2), 0, 0],
+                    [0, np.exp(-T/T2), 0],
+                    [0, 0, np.exp(-T/T1)]])
+    brecover = np.array([0, 0, M0*(1-np.exp(-T/T1))])
+    
 
-        return M_final
+    M_final = A_relax * M_init + brecover
 
-    ## Bloch relaxation in batch
-    # calculation of Bloch equation on a batch of timepoints
-    """
-    Parameters - see Bloch relaxtion
-    Ts      : time points [ms]
-    """
-    def bloch_relax_batch(M_init, Ts, M0, T1, T2):
-        Mx = np.exp(-Ts/T2) * M_init[0]
-        My = np.exp(-Ts/T2) * M_init[1]
-        Mz = np.exp(-Ts/T1) * M_init[2] + M0*(1-np.exp(-Ts/T1))
+    return M_final
 
-        M_final = np.array([Mx, My, Mz])
+## Bloch relaxation in batch
+# calculation of Bloch equation on a batch of timepoints
+"""
+Parameters - see Bloch relaxtion
+Ts      : time points [ms]
+"""
+def bloch_relax_batch(M_init, Ts, M0, T1, T2):
+    Mx = np.exp(-Ts/T2) * M_init[0]
+    My = np.exp(-Ts/T2) * M_init[1]
+    Mz = np.exp(-Ts/T1) * M_init[2] + M0*(1-np.exp(-Ts/T1))
 
-        return M_final
+    M_final = np.array([Mx, My, Mz])
 
-    ## Bloch rotation
-    # calculation of Bloch rotation
-    """
-    Parameters
-    M_init  : initial magnetization
-    T       : duration [ms]
-    B       : [Bx, By, Bz] - magnetic field [mT]
-    M_final : final magnetization
-    angle   : flip angle among coordinates (x, y, z)
-    """
+    return M_final
+
+## Bloch rotation
+# calculation of Bloch rotation
+"""
+Parameters
+M_init  : initial magnetization
+T       : duration [ms]
+B       : [Bx, By, Bz] - magnetic field [mT]
+M_final : final magnetization
+angle   : flip angle among coordinates (x, y, z)
+"""
 
 def bloch_rotate(M_init, T, B, angle):
     Gamma = 42.58  # kHz/mT MHz/T
