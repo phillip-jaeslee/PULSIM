@@ -6,30 +6,19 @@ class spin_half:
 
     # Anglular momentum operators
     def Ix():
-        return torch.stack([
-            torch.stack([torch.zeros(1), torch.ones(1)], dim=0),
-            torch.stack([torch.ones(1), torch.zeros(1)], dim=0)
-        ], dim=0).to(device) / 2
+        return torch.tensor([[0, 1/2], [1/2, 0]], dtype=torch.complex128)
 
     def Iy():
-        return torch.stack([
-            torch.stack([torch.zeros(1), torch.ones(1)], dim=0),
-            torch.stack([-torch.ones(1), torch.zeros(1)], dim=0)
-        ], dim=0).to(device) * -1j / 2
+        return torch.tensor([[0, -1j/2], [1j/2, 0]], dtype=torch.complex128)
+
 
     def Iz():
-        return torch.stack([
-            torch.stack([torch.ones(1), torch.zeros(1)], dim=0),
-            torch.stack([torch.zeros(1), -torch.ones(1)], dim=0)
-        ], dim=0).to(device) / 2
+        return torch.tensor([[1/2, 0], [0, 1/2]], dtype=torch.complex128)
 
 
     # Unity operator
     def unity():
-        return torch.stack([
-            torch.stack([torch.ones(1), torch.zeros(1)], dim=0),
-            torch.stack([torch.zeros(1), torch.ones(1)], dim=0)
-        ], dim=0).to(device) / 2
+        return torch.eye(2, dtype=torch.complex128)
 
     # Shift operators
     def Ip():
