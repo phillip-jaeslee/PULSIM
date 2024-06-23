@@ -18,6 +18,8 @@ git clone https://www.github.com/phillip-jaeslee/PULSIM
 
 * 0.0.1
     * Work in progress
+* 0.0.2
+    * Updated numpy into torch for better performance
 
 ## LICENSE
 
