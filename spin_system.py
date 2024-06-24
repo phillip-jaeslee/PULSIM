@@ -2,8 +2,8 @@ from mat_operator import *
 import torch
 import sparse
 
-CACHE = True  # saving of partial solutions is allowed
-SPARSE = True  # the sparse library is available
+CACHE = False  # saving of partial solutions is allowed
+SPARSE = False  # the sparse library is available
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -14,6 +14,25 @@ def thermal_eq(boltzmann_factor):
 
 
 ### all the spin_system.py code is written in nmrsim library
+
+import sys
+
+import scipy.sparse
+
+if sys.version_info >= (3, 7):
+    from importlib import resources
+else:
+    import importlib_resources as resources
+
+from mat import normalize_peaklist
+
+def _bin_path():
+    """Return a Path to the nmrsim/bin directory."""
+    #init_path_context = "__init__.py"
+    #with init_path_context as p:
+    #    init_path = p
+    bin_path = "/bin"
+    return bin_path
 
 def spin_system_dense(nspins):
 
@@ -75,11 +94,14 @@ def spin_system_sparse(nspins):
 def hamiltonian_dense(v, J):
     nspins = len(v)
     Lz, Lproduct = spin_system_dense(nspins)
-    H = torch.tensrodot(v, Lz, dims=1)
-    if not isinstance(J, torch.tensor):
-        J = torch.tensor(J)
+    v = torch.tensor(v, dtype=torch.complex128)
+    Lz = torch.tensor(Lz, dtype=torch.complex128)
+    if not isinstance(J, torch.Tensor):
+        J = torch.tensor(J, dtype=torch.complex128)
+    H = torch.tensordot(v, Lz, dims=1)
     scalars = 0.5 * J
     H += torch.tensordot(scalars, Lproduct, dims=2)
+    print(H)
     return H
 
 def hamiltonian_sparse(v, J):
@@ -101,24 +123,24 @@ def hamiltonian_sparse(v, J):
 
 def _transition_matrix_dense(nspins):
     n = 2**nspins
-    T = torch.zeors((n,n))
+    T = torch.zeros((n,n), dtype=torch.complex128)
     for i in range(n - 1):
         for j in range(i + 1, n):
             if bin(i ^ j).count("1") == 1:
                 T[i, j] = 1
-    T += T.T
+    T = T + T.T
     return T
 
 def secondorder_dense(freqs, couplings, normalize=True, **kwargs):
     nspins = len(freqs)
     H = hamiltonian_dense(freqs, couplings)
     E, V = torch.linalg.eigh(H)
-    V = V.real
+    V = V.real.to(torch.complex128) # to make sure possible to calculate "@"
     T = _transition_matrix_dense(nspins)
-    I = torch.sqaure(V.T @ (T @ V))
+    I = torch.square(V.T @ (T @ V))
     peaklist = _compile_peaklist(I, E, **kwargs)
     if normalize:
-        peaklist = normalize_peaklist(peaklist, npsins)
+        peaklist = normalize_peaklist(peaklist, nspins)
     return peaklist
 
 def _tm_cache(nspins):
@@ -149,18 +171,19 @@ def _compile_peaklist(I, E, cutoff=0.001):
     E_upper = torch.triu(E_matrix)
     combo = torch.stack([E_upper, I_upper])
     iv = combo.reshape(2, I.shape[0] ** 2).T
-    return iv[iv[:, 1] >= cutoff] 
+    iv = iv.to(torch.float64) # ge_cpu not implemented for 'Complex128'
+    return iv[iv[:, 1] >= cutoff]
 
 def solve_hamiltonian(H, nspins, **kwargs):
     I, E = _intensity_and_energy(H, spins)
     return _compile_peaklist(I, E, **kwargs)
 
 def secondorder_sparse(freqs, couplings, normalize=True, **kwargs):
-    npsins = len(freqs)
+    nspins = len(freqs)
     H = hamiltonian_sparse(freqs, couplings)
-    peaklist = solve_hamiltonian(H.to_dense(), npsins, **kwargs)
+    peaklist = solve_hamiltonian(H.to_dense(), nspins, **kwargs)
     if normalize:
-        peaklist = normalize_peaklist(peaklist, npsins)
+        peaklist = normalize_peaklist(peaklist, nspins)
     return peaklist
 
 def qm_spinsystem(*args, cache=CACHE, sparse=SPARSE, **kwargs):
