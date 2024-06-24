@@ -13,7 +13,7 @@ class spin_half:
 
 
     def Iz():
-        return torch.tensor([[1/2, 0], [0, 1/2]], dtype=torch.complex128)
+        return torch.tensor([[1/2, 0], [0, -1/2]], dtype=torch.complex128)
 
 
     # Unity operator
