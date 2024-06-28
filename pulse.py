@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import torch
-from rotation import Rot
+from rotation import Rot, cpu_pulse
 from bloch import bloch_rotate, torch_bloch_rotate
 from file_import import import_file, read_xy_points
 from joblib import Parallel, delayed
@@ -42,7 +42,7 @@ class cpu_pulse:
         pul_type = ""
         for k in range(len(xy_array)):
             xy_temp = np.zeros((2, 1), dtype=float)
-            xy_temp = Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
+            xy_temp = cpu_pulse.Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
             RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
         if (max(xy_array[:,1])>=350):
             pul_type = "adiabatic"
