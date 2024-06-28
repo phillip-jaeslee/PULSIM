@@ -10,7 +10,7 @@ class cpu_pulse:
     
     global MULTI
 
-    def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma):
+    def import_shaped_pulse(M, flip, angle, t_max, file_path, BW, Gamma, MULTI=1):
 
         start = time.time()
 
@@ -71,7 +71,7 @@ class cpu_pulse:
 
         return M, df, RF, t_max, N
 
-    def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
+    def shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma, MULTI=1) :
 
         start = time.time()
         
@@ -130,7 +130,7 @@ class cpu_pulse:
 
         return M, df, RF, t_max, N
 
-    def hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
+    def hard_pulse(M, flip, angle, t_max, N, BW, Gamma, MULTI=1):
 
         start = time.time()
         
