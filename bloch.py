@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from rotation import Rx, Ry, Rz
+from mat_operator import torch_rot, cpu_rot
 
 ## Bloch relaxation
 # calculation of Bloch equation for time T
@@ -58,11 +58,11 @@ def bloch_rotate(M_init, T, B, angle):
     eta = np.arccos(B[2] / (np.linalg.norm(B) +np.finfo(np.float64).eps))
     theta = np.arctan2(B[1], B[0])
     if angle == "x":
-        M_final = Rz(-theta)@Ry(-eta)@Rz(flip)@Ry(eta)@Rz(theta) @ M_init
+        M_final = cpu_rot.Rz(-theta)@cpu_rot.Ry(-eta)@cpu_rot.Rz(flip)@cpu_rot.Ry(eta)@cpu_rot.Rz(theta) @ M_init
     elif angle == "y":
-        M_final = Rx(-theta)@Rz(-eta)@Rx(flip)@Rz(eta)@Rx(theta) @ M_init
+        M_final = cpu_rot.Rx(-theta)@cpu_rot.Rz(-eta)@cpu_rot.Rx(flip)@cpu_rot.Rz(eta)@cpu_rot.Rx(theta) @ M_init
     elif angle == "z":
-        M_final = Ry(-theta)@Rx(-eta)@Ry(flip)@Rx(eta)@Ry(theta) @ M_init
+        M_final = cpu_rot.Ry(-theta)@cpu_rot.Rx(-eta)@cpu_rot.Ry(flip)@cpu_rot.Rx(eta)@cpu_rot.Ry(theta) @ M_init
     else:
         raise ValueError(f'Failed to run the proper bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
 
@@ -89,20 +89,20 @@ def torch_bloch_rotate(M_init, T, B, angle):
     # torch.bmm = matrix multiplication (not available for broadcast)
 
     if angle == "x":
-        R = torch.bmm(Rz(-theta).permute(2, 0, 1), Ry(-eta).permute(2, 0, 1))
-        R = torch.bmm(R, Rz(flip).permute(2, 0, 1))
-        R = torch.bmm(R, Ry(eta).permute(2, 0, 1))
-        R = torch.bmm(R, Rz(theta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Rz(-theta).permute(2, 0, 1), torch_rot.Ry(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rz(flip).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Ry(eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rz(theta).permute(2, 0, 1))
     elif angle == "y":
-        R = torch.bmm(Rx(-theta).permute(2, 0, 1), Rz(-eta).permute(2, 0, 1))
-        R = torch.bmm(R, Rx(flip).permute(2, 0, 1))
-        R = torch.bmm(R, Rz(eta).permute(2, 0, 1))
-        R = torch.bmm(R, Rx(theta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Rx(-theta).permute(2, 0, 1), torch_rot.Rz(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rx(flip).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rz(eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rx(theta).permute(2, 0, 1))
     elif angle == "z":
-        R = torch.bmm(Ry(-theta).permute(2, 0, 1), Rx(-eta).permute(2, 0, 1))
-        R = torch.bmm(R, Ry(flip).permute(2, 0, 1))
-        R = torch.bmm(R, Rx(eta).permute(2, 0, 1))
-        R = torch.bmm(R, Ry(theta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Ry(-theta).permute(2, 0, 1), torch_rot.Rx(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Ry(flip).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rx(eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Ry(theta).permute(2, 0, 1))
     else:
         raise ValueError(f'Failed to run the proper Bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
 
@@ -146,7 +146,7 @@ def bloch_rftip(M_init, T, B1):
 
 def bloch_simulation(M_init, dt, B1, G, M0, T1, T2, r, df):
     Nt = max(B1.shape)
-    M_all = np.zeors(3, Nt)
+    M_all = np.zeros(3, Nt)
 
     for i in range(1, Nt):
         if i == 1:
