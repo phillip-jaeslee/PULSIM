@@ -1,4 +1,4 @@
-from mat_operator import *
+from mat_operator import spin_half
 import torch
 import sparse
 
@@ -64,7 +64,7 @@ def spin_system_dense(nspins):
 def spin_system_sparse(nspins):
     filename_Lz = f"Lz{nspins}.npz"
     filename_Lproduct = f"Lproduct{nspins}.npz"
-    bin_path = _bin_path()
+    bin_path = _bin_path
     path_Lz = bin_path.joinpath(filename_Lz)
     path_Lproduct = bin_path.joinpath(filename_Lproduct)
     
@@ -122,12 +122,14 @@ def hamiltonian_sparse(v, J):
     return H
 
 def _transition_matrix_dense(nspins):
+    # possible energy transition for single-quantum coherence
+    # TODO possible energy transition for either zero or second-quantum coherence if we want to describe the NOE effect
     n = 2**nspins
     T = torch.zeros((n,n), dtype=torch.complex128)
     for i in range(n - 1):
         for j in range(i + 1, n):
             if bin(i ^ j).count("1") == 1:
-                T[i, j] = 1
+                T[i, j] = 1          
     T = T + T.T
     return T
 
@@ -155,14 +157,14 @@ def _tm_cache(nspins):
         T_sparse = _transition_matrix_dense(nspins)
         T_sparse = torch.sparse_coo_tensor(T_sparse)
         print("_tm_cache will save on path: ", path)
-        sparese.save_npz(path, T_sparse)
+        sparse.save_npz(path, T_sparse)
         return T_sparse
 
 def _intensity_and_energy(H, spins):
-    E, V = torch.linalg.eigh(H)
+    E, V = torch.linalg.eigh(H) # torch.linalg.eigh give the eigen vector (diagoanl matrix) and the rotational matrix sequentially
     V = V.real
     T = _tm_cache(nspins)
-    I = torch.square(V.T @ (T @ V))
+    I = torch.square(V.T @ (T @ V)) 
     return I, E
 
 def _compile_peaklist(I, E, cutoff=0.001):
