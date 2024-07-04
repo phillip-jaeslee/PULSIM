@@ -1,9 +1,10 @@
 from mat_operator import spin_half
 import torch
 import sparse
+import numpy
 
-CACHE = False  # saving of partial solutions is allowed
-SPARSE = False  # the sparse library is available
+CACHE = True  # saving of partial solutions is allowed
+SPARSE = True  # the sparse library is available
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -16,7 +17,8 @@ def thermal_eq(boltzmann_factor):
 ### all the spin_system.py code is written in nmrsim library
 
 import sys
-
+import temp
+from pathlib import Path
 import scipy.sparse
 
 if sys.version_info >= (3, 7):
@@ -28,10 +30,10 @@ from mat import normalize_peaklist
 
 def _bin_path():
     """Return a Path to the nmrsim/bin directory."""
-    #init_path_context = "__init__.py"
-    #with init_path_context as p:
-    #    init_path = p
-    bin_path = "/bin"
+    init_path_context = resources.path(temp, "__init__.py")
+    with init_path_context as p:
+        init_path = p
+    bin_path = init_path.parent
     return bin_path
 
 def spin_system_dense(nspins):
@@ -64,32 +66,39 @@ def spin_system_dense(nspins):
 def spin_system_sparse(nspins):
     filename_Lz = f"Lz{nspins}.npz"
     filename_Lproduct = f"Lproduct{nspins}.npz"
-    bin_path = _bin_path
-    path_Lz = bin_path.joinpath(filename_Lz)
-    path_Lproduct = bin_path.joinpath(filename_Lproduct)
+    bin_path = _bin_path()
+    path_Lz = bin_path / filename_Lz
+    path_Lproduct = bin_path / filename_Lproduct
     
     try:
         # Load the sparse arrays
         Lz_sparse = sparse.load_npz(path_Lz)
         Lproduct_sparse = sparse.load_npz(path_Lproduct)
         
-        # Convert sparse arrays to coordinate (COO) format and then to PyTorch sparse tensors
-        Lz_torch = torch.sparse_coo_tensor(Lz_sparse.coords, Lz_sparse.data, Lz_sparse.shape)
-        Lproduct_torch = torch.sparse_coo_tensor(Lproduct_sparse.coords, Lproduct_sparse.data, Lproduct_sparse.shape)
-        
+        # Convert scipy sparse matrices to PyTorch sparse tensors
+        Lz_torch = torch.sparse_coo_tensor(torch.tensor(Lz_sparse.coords), torch.tensor(Lz_sparse.data), Lz_sparse.shape, dtype=torch.complex128)
+        Lproduct_torch = torch.sparse_coo_tensor(torch.tensor(Lproduct_sparse.coords), torch.tensor(Lproduct_sparse.data), Lproduct_sparse.shape, dtype=torch.complex128)
+            
         return Lz_torch, Lproduct_torch
 
     except FileNotFoundError:
-        print("no SO file ", path_Lz, " found.")
-        print(f"creating {filename_Lz} and {filename_Lproduct}")
+        print("No SO file", path_Lz, "found.")
+        print(f"Creating {filename_Lz} and {filename_Lproduct}")
     
     Lz, Lproduct = spin_system_dense(nspins)
-    Lz_sparse = torch.sparse_coo_tensor(Lz.coords, Lz.data, Lz.shape)
-    Lproduct_sparse = torch.sparse_coo_tensor(Lproduct.coords, Lproduct.data, Lproduct.shape)
+
+    # Convert dense tensors to sparse using scipy before saving
+    Lz_sparse = sparse.COO(Lz.numpy())
+    Lproduct_sparse = sparse.COO(Lproduct.numpy())
+    
+    # Save sparse matrices
     sparse.save_npz(path_Lz, Lz_sparse)
     sparse.save_npz(path_Lproduct, Lproduct_sparse)
 
-    return Lz_sparse, Lproduct_sparse
+    # Convert scipy sparse matrices to PyTorch sparse tensors
+    Lz_torch = torch.sparse_coo_tensor(torch.tensor(Lz_sparse.coords), torch.tensor(Lz_sparse.data), Lz_sparse.shape, dtype=torch.complex128)
+    Lproduct_torch = torch.sparse_coo_tensor(torch.tensor(Lproduct_sparse.coords), torch.tensor(Lproduct_sparse.data), Lproduct_sparse.shape, dtype=torch.complex128)
+    return Lz_torch, Lproduct_torch
 
 def hamiltonian_dense(v, J):
     nspins = len(v)
@@ -101,7 +110,6 @@ def hamiltonian_dense(v, J):
     H = torch.tensordot(v, Lz, dims=1)
     scalars = 0.5 * J
     H += torch.tensordot(scalars, Lproduct, dims=2)
-    print(H)
     return H
 
 def hamiltonian_sparse(v, J):
@@ -110,15 +118,35 @@ def hamiltonian_sparse(v, J):
     print("From hamiltonian_sparse:")
     print("Lz is type: ", type(Lz))
     print("Lproduct is type: ", type(Lproduct))
-    assert isinstance(Lz, (torch.sparse_coo_tensor, torch.tensor))
+    assert Lz.is_sparse
+    assert Lproduct.is_sparse
 
-    if not isinstance(v, torch.tensor):
-        v = torch.tensor(v)
-    if not isinstance(J, torch.tensor):
-        J = torch.tensor(J)
-    H = torch.tensordot(torch.sparse_coo_tensor(v.coords, v.data, v.shape), Lz, dims=1)
-    scalars = 0.5 * torch.sparse_coo_tensor(J.coords, J.data, J.shape)
-    H += torch.tensordot(scalars, Lproduct, dims=2)
+    # Ensure v is a tensor
+    if not isinstance(v, torch.Tensor):
+        v = torch.tensor(v, dtype=torch.complex128)
+    
+    # Create a sparse tensor from v
+    v_indices = torch.arange(len(v)).unsqueeze(0)
+    v_sparse = torch.sparse_coo_tensor(v_indices, v, (len(v),))
+
+    # Ensure J is a tensor and handle 2D case
+    if not isinstance(J, torch.Tensor):
+        J = torch.tensor(J, dtype=torch.complex128)
+
+    # Create a sparse tensor from J
+    J_indices = torch.nonzero(J, as_tuple=False).t()
+    J_values = J[J_indices[0], J_indices[1]]
+    J_sparse = torch.sparse_coo_tensor(J_indices, J_values, J.shape, dtype=torch.complex128)
+    
+    # Convert sparse matrices to dense before performing operations
+    Lz_dense = Lz.to_dense()
+    Lproduct_dense = Lproduct.to_dense()
+
+    # Compute Hamiltonian using tensordot
+    H = torch.tensordot(v_sparse.to_dense(), Lz_dense, dims=1)
+    scalars = 0.5 * J_sparse.to_dense()
+    H += torch.tensordot(scalars, Lproduct_dense, dims=2)
+    
     return H
 
 def _transition_matrix_dense(nspins):
@@ -155,15 +183,18 @@ def _tm_cache(nspins):
     except FileNotFoundError:
         print(f"creating{filename}")
         T_sparse = _transition_matrix_dense(nspins)
-        T_sparse = torch.sparse_coo_tensor(T_sparse)
+        T_sparse_sparse = sparse.COO(T_sparse.numpy())
+        T_indices = torch.arange(len(T_sparse)).unsqueeze(0)
+        T_sparse = torch.sparse_coo_tensor(T_indices, torch.tensor(T_sparse.data), T_sparse.shape, dtype=torch.complex128)
         print("_tm_cache will save on path: ", path)
-        sparse.save_npz(path, T_sparse)
+        sparse.save_npz(path, T_sparse_sparse)
         return T_sparse
 
 def _intensity_and_energy(H, spins):
     E, V = torch.linalg.eigh(H) # torch.linalg.eigh give the eigen vector (diagoanl matrix) and the rotational matrix sequentially
     V = V.real
-    T = _tm_cache(nspins)
+    T = _tm_cache(spins).todense()
+    T = torch.tensor(T, dtype = torch.float64)
     I = torch.square(V.T @ (T @ V)) 
     return I, E
 
@@ -177,7 +208,7 @@ def _compile_peaklist(I, E, cutoff=0.001):
     return iv[iv[:, 1] >= cutoff]
 
 def solve_hamiltonian(H, nspins, **kwargs):
-    I, E = _intensity_and_energy(H, spins)
+    I, E = _intensity_and_energy(H, nspins)
     return _compile_peaklist(I, E, **kwargs)
 
 def secondorder_sparse(freqs, couplings, normalize=True, **kwargs):
