@@ -1,7 +1,8 @@
 scipy
-numpy
+numpy >= 1.25
 matplotlib
 joblib
 inflect
 ipympl
 torch
+ffmpeg

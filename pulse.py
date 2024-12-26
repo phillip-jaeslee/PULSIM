@@ -200,6 +200,7 @@ class torch_pulse:
         M               - final magnetization vector
         df              - bandwith array of the pulse
         RF              - pulse shape array
+        RF              - pulse phase
         t               - time array of the pulse
         t_max           - duration of pulse (need to be stored to plot the pulse diagram)
         """
@@ -215,8 +216,8 @@ class torch_pulse:
         pul_type = ""
         angles = torch.tensor(xy_array[:, 1], dtype=torch.float32, device=device) * torch.pi / 180
         magnitudes = torch.tensor(xy_array[:, 0], dtype=torch.float32, device=device)
-        RF_real = torch.cos(angles)
-        RF_imag = torch.sin(angles)
+        RF_real = torch.cos(-angles)
+        RF_imag = torch.sin(-angles)
         RF_array = torch.complex(magnitudes * RF_real, magnitudes * RF_imag)
 
         pul_type = "adiabatic" if (max(xy_array[:,1])>=350) else ""
@@ -225,25 +226,25 @@ class torch_pulse:
         if pul_type == "adiabatic":
             RF *= 2
 
-        df = torch.linspace(-BW/2, BW/2, steps=1000, dtype=torch.float32, device=device)
+        df = torch.linspace(-BW/2, BW/2, steps=N, dtype=torch.float32, device=device)
 
         M = torch.tensor(M, dtype=torch.float32, device=device)
 
         RF_real_expanded = RF.real.expand(len(df), -1)
         RF_imag_expanded = RF.imag.expand(len(df), -1)
-        df_expanded = df[:, None].expand(-1, 1000) / Gamma
+        df_expanded = df[:, None].expand(-1, N) / Gamma
 
+        RF_angle = np.array(xy_array[:, 1])
         
-
         B = torch.stack([RF_real_expanded, RF_imag_expanded, df_expanded], dim=2)
         for n in range(len(t)):
-            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle).T
+            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle, Gamma).T
 
         end = time.time()
-
+        RF = abs(RF)
         print('elapsed time: {} sec'.format(end-start) )
 
-        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), t_max, N
+        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), RF_angle, t_max, N
 
     def torch_shaped_pulse(M, flip, angle, t_max, shape, N, BW, Gamma) :
 
@@ -290,26 +291,33 @@ class torch_pulse:
             raise ValueError(f'Failed to run the proper bloch rotation with "{shape}".')
         RF = (flip) * RF/torch.sum(RF) / (2*torch.pi*Gamma*dt)
 
-        df = torch.linspace(-BW/2, BW/2, steps=1000, dtype=torch.float32, device=device)
+        df = torch.linspace(-BW/2, BW/2, steps=N, dtype=torch.float32, device=device)
+
+        RF_angle = np.ones((1, int(N)))
+
+        if flip > 0:
+            RF_angle = RF_angle * 0
+        elif flip < 0:
+            RF_angle = RF_angle * 180
 
         # Expand dimensions to align properly for stacking
         # tensor.expand = repeating the tensor (-1 without changing dimension)
         RF_expanded = RF.expand(len(df), -1)
         zeros_expanded = torch.zeros(len(df), N, device=device)
-        df_expanded = df[:, None].expand(-1, 1000) / Gamma
+        df_expanded = df[:, None].expand(-1, N) / Gamma
 
         # B = [RF, 0, df]
         B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
 
 
         for n in range(len(t)):
-            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle).T
+            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle, Gamma).T
 
         end = time.time()
 
         print('elapsed time: {} sec'.format(end-start) )
 
-        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), t_max, N
+        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), RF_angle, t_max, N
 
     def torch_hard_pulse(M, flip, angle, t_max, N, BW, Gamma):
         start = time.time()
@@ -346,24 +354,31 @@ class torch_pulse:
         t = torch.arange(init, final, device=device) * dt
         RF = torch.ones((1, int(N)), dtype=torch.float32, device=device)
         RF = (flip * RF) / torch.sum(RF) / (2 * torch.pi * Gamma * dt)
-        df = torch.linspace(-BW / 2, BW / 2, steps=1000, device=device)
+        df = torch.linspace(-BW / 2, BW / 2, steps= N, device=device)
+
+        RF_angle = np.ones((1, int(N)))
+
+        if flip > 0:
+            RF_angle = RF_angle * 0
+        elif flip < 0:
+            RF_angle = RF_angle * 180
 
         # Expand dimensions to align properly for stacking
         # tensor.expand = repeating the tensor (-1 without changing dimension)
         RF_expanded = RF.expand(len(df), -1)
         zeros_expanded = torch.zeros(len(df), N, device=device)
-        df_expanded = df[:, None].expand(-1, 1000) / Gamma
+        df_expanded = df[:, None].expand(-1, N) / Gamma
 
         # B = [RF, 0, df]
         B = torch.stack([RF_expanded, zeros_expanded, df_expanded], dim=2)
 
         for n in range(len(t)):
-            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle).T
+            M = torch_bloch_rotate(M.T, dt, B[:, n, :], angle, Gamma).T
 
         end = time.time()
         print('elapsed time: {} sec'.format(end - start))
 
-        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), t_max, N
+        return M.cpu().numpy(), df.cpu().numpy(), RF.cpu().numpy(), RF_angle, t_max, N
     
 
     def torch_gaussian(x, mu, sig):

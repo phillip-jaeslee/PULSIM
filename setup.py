@@ -2,16 +2,17 @@ from setuptools import setup, find_packages
 
 setup(
     name='PULSIM',
-    version='0.0.2',
+    version='0.1.1',
     packages=find_packages(),
     install_requires=[
         "scipy",
-        "numpy",
+        "numpy >= 1.25",
         "matplotlib",
         "joblib",
         "inflect",
         "ipympl",
-        "torch"
+        "torch",
+        "ffmpeg"
     ],
     author='Jaeseok Lee',
     author_email='jslee24@snu.ac.kr',

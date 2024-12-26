@@ -6,7 +6,9 @@ from matplotlib.animation import FuncAnimation
 from matplotlib import cm
 from bloch import bloch_rotate
 from file_import import import_file
-from rotation import Rot
+from mat_operator import *
+from scipy.interpolate import CubicSpline
+
 
 def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma):
 
@@ -27,36 +29,52 @@ def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma
     t               - time array of the pulse
     t_max           - duration of pulse (need to be stored to plot the pulse diagram)
     """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    # Import shaped pulse data
     xy_array = import_file(file_path)
+
+    # Original number of points and time scaling
     N = len(xy_array)
     dt = t_max / N
-    init = -N/2
-    final = N/2
-    angles = torch.tensor(xy_array[:, 1], dtype=torch.float32, device=device) * torch.pi / 180
-    magnitudes = torch.tensor(xy_array[:, 0], dtype=torch.float32, device=device)
+    t = np.linspace(-N / 2 * dt, N / 2 * dt, N)
+
+    # Target number of points
+    target_N = int(t_max * 1000)
+    t_resampled = np.linspace(-t_max / 2, t_max / 2, target_N)
+
+    # Resample the xy_array to the t_max * 1000 points
+    xy_resampled = np.zeros((target_N, 2), dtype=np.float64)
+    xy_resampled[:, 0] = CubicSpline(t, xy_array[:, 0])(t_resampled)
+    xy_resampled[:, 1] = CubicSpline(t, xy_array[:, 1])(t_resampled)
     
-    RF_real = torch.cos(angles)
-    RF_imag = torch.sin(angles)
-    RF_array = torch.complex(magnitudes * RF_real, magnitudes * RF_imag)
+    # Prepare RF array
+    RF_array = np.zeros(np.shape(xy_resampled), dtype=np.complex128)
+
+    for k in range(target_N):
+        xy_temp = np.zeros((2, 1), dtype=float)
+        xy_temp = cpu_rot.Rot(xy_resampled[k, 1] * np.pi / 180) @ np.array([1, 0]).T
+        RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
+
+    # Check whether adiabatic pulse or not
     pul_type = ""
-    pul_type = "adiabatic" if (max(xy_array[:,1])>=350) else ""
-    RF = RF_array
-    RF = (flip) * RF/ torch.sum(RF) / (2*torch.pi*Gamma*dt)
-    if pul_type == "adiabatic":
-        RF *= 2
-    g_expanded = torch.ones(N, dtype=torch.float32, device=device) * phi / Gamma 
+    if (max(xy_resampled[:,1])>=350):
+        pul_type = "adiabatic"
+    RF = xy_resampled[:, 0] * RF_array[:, 1]
+    if (pul_type == "adiabatic"):
+        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt) * 2
+    else:
+        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt)
+    
+    # Add pulse to the magntization
+    for n in range(N_init, N_init + target_N):
+        if n == 0:
+            M[:, n] = M[:, n]
+        else:
+            M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), phi/Gamma], angle)
 
-    M = torch.tensor(M, dtype=torch.float32, device=device)
-    B = torch.stack([RF.real, RF.imag, g_expanded], dim=1)
+    # Update the number of points
+    N_final = N_init + target_N
 
-    for n in range(N):
-            M[:, N_init + n] = bloch_rotate(M[:, N_init + n - 1].unsqueeze(0), dt, B[n].unsqueeze(0), angle).squeeze(0)
-
-    N_final = N_init + N
-
-    return M.cpu().numpy(), N_final
+    return M, N_final
 
 
 def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, phi, Gamma):
@@ -99,8 +117,6 @@ def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, phi, Gamma):
 
 def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     ## hard pulse simulator
     """
     M, df, RF, t_max = sim_hard_pulse(M, flip, angle, t_max, N, Gamma)
@@ -118,16 +134,12 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
     dt = t_max / N
     init = -N/2
     final = N/2
-    RF = torch.ones(N, dtype=torch.float32, device=device)
-    RF = (flip) * RF/torch.sum(RF) / (2*torch.pi*Gamma*dt)
-    g_expanded = torch.ones(N, dtype=torch.float32, device=device) * phi / Gamma
-    zero_expanded = torch.zeros_like(RF, dtype=torch.float32, device=device)
+    t = np.arange(init, final-1, 1) * dt
+    RF = np.ones((1, int(N)))
+    RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
 
-    B = torch.stack([RF, zero_expanded, g_expanded], dim=1)
-    M = torch.tensor(M, dtype=torch.float32, device=device)
-
-    for n in range(N):
-            M[:, N_init + n] = bloch_rotate(M[:, N_init + n - 1].unsqueeze(0), dt, B[n].unsqueeze(0), angle).squeeze(0)
+    for n in range(N_init, N_init + N):
+        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n-N_init]), np.imag(RF[0, n-N_init]), phi/Gamma], angle)
 
     N_final = N + N_init
 
@@ -135,7 +147,7 @@ def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
 
 
 
-def plot_3D_arrow_figure(Ms, num_arrows, N):
+def plot_3D_arrow_figure(Ms, num_arrows, N, color, interval):
     
 
     ## 3D arrow motion plot simulator
@@ -148,12 +160,13 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
     output:
     ani             - 3D plotted animation
     """
+
     global fig, ax
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     # Generate base colors from a colormap
-    cmap = cm.get_cmap('viridis', num_arrows)
+    cmap = cm.get_cmap(color, num_arrows)
     base_colors = [cmap(i) for i in range(num_arrows)]
 
     def get_arrow(Ms, frame):
@@ -178,7 +191,7 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
 
         quivers = [ax.quiver(*get_arrow(Ms[i], frame), pivot='tail', color=base_colors[i]) for i in range(num_arrows)]
 
-        ax.set_title(f'Time: {frame} milliseconds')
+        ax.set_title(f'Time: {frame} microseconds')
 
     # Plotting radius 1 sphere surface
     radius = 1
@@ -203,14 +216,17 @@ def plot_3D_arrow_figure(Ms, num_arrows, N):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    ani = FuncAnimation(fig, update, frames=range(N), interval=1)
+    # Set aspect ratio to make all axes equal
+    ax.set_box_aspect([1, 1, 1])  # Equal aspect ratio for x, y, z
+
+    ani = FuncAnimation(fig, update, frames=range(N), interval=interval)
     plt.show()
 
     return ani
 
-def save_animation_to_gif(ani, file_name):
+def save_animation_to_gif(ani, file_name, fps):
     """
     ani         : animation returned by FuncAnimation
     file_name   : save file names with file index
     """
-    ani.save(file_name, writer='pillow', fps=10000, dpi=300) # pip install pillow or conda install pillow
+    ani.save(file_name, writer='pillow', fps=fps, dpi=150) # pip install pillow or conda install pillow

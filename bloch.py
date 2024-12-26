@@ -79,30 +79,29 @@ M_final : final magnetization
 """
 
 
-def torch_bloch_rotate(M_init, T, B, angle):
-    Gamma = 42.58  # kHz/mT MHz/T
+def torch_bloch_rotate(M_init, T, B, angle, Gamma):
     flip = 2 * torch.pi * Gamma * torch.norm(B, dim=1) * T
-    eta = torch.acos(B[:, 2] / (torch.norm(B, dim=1) + torch.finfo(torch.float32).eps))
+    eta = torch.acos(B[:, 2] / (torch.norm(B, dim=1)))
     theta = torch.atan2(B[:, 1], B[:, 0])
 
     # torch.permute (2, 0, 1) = change the order of dimension
     # torch.bmm = matrix multiplication (not available for broadcast)
 
     if angle == "x":
-        R = torch.bmm(torch_rot.Rz(-theta).permute(2, 0, 1), torch_rot.Ry(-eta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Rz(theta).permute(2, 0, 1), torch_rot.Ry(eta).permute(2, 0, 1))
         R = torch.bmm(R, torch_rot.Rz(flip).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Ry(eta).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Rz(theta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Ry(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rz(-theta).permute(2, 0, 1))
     elif angle == "y":
-        R = torch.bmm(torch_rot.Rx(-theta).permute(2, 0, 1), torch_rot.Rz(-eta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Rx(theta).permute(2, 0, 1), torch_rot.Rz(eta).permute(2, 0, 1))
         R = torch.bmm(R, torch_rot.Rx(flip).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Rz(eta).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Rx(theta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rz(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rx(-theta).permute(2, 0, 1))
     elif angle == "z":
-        R = torch.bmm(torch_rot.Ry(-theta).permute(2, 0, 1), torch_rot.Rx(-eta).permute(2, 0, 1))
+        R = torch.bmm(torch_rot.Ry(theta).permute(2, 0, 1), torch_rot.Rx(eta).permute(2, 0, 1))
         R = torch.bmm(R, torch_rot.Ry(flip).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Rx(eta).permute(2, 0, 1))
-        R = torch.bmm(R, torch_rot.Ry(theta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Rx(-eta).permute(2, 0, 1))
+        R = torch.bmm(R, torch_rot.Ry(-theta).permute(2, 0, 1))
     else:
         raise ValueError(f'Failed to run the proper Bloch rotation with "{angle}". Please choose among x, y, z coordinates.')
 

@@ -107,5 +107,5 @@ class cpu_rot:
 
     def Rot(flip):
         Rot = np.array ([[np.cos(flip), np.sin(flip)],
-                    [-np.sin(flip), np.cos(flip)]])
+                        [-np.sin(flip), np.cos(flip)]])
         return Rot
