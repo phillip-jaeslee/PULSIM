@@ -23,7 +23,8 @@ git clone https://www.github.com/phillip-jaeslee/PULSIM
     * Work in progress
 * 0.0.2
     * Updated numpy into torch for better performance
-
+* 0.1.1
+    * Increased compatibility with google Colaboratory
 ## LICENSE
 
 Distributed under the MIT license. See ``LICENSE`` for more information.
