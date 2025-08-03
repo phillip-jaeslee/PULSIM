@@ -21,6 +21,7 @@ Provides the following functions:
   datapoint closest to that frequency.
 """
 import numpy as np
+import math
 
 
 def add_peaks(plist):
@@ -113,6 +114,31 @@ def normalize_peaklist(peaklist, n=1):
     freq, int_ = [x for x, y in peaklist], [y for x, y in peaklist]
     _normalize(int_, n)
     return list(zip(freq, int_))
+
+def lorentzian_area_conserved(v, v0, I, w):
+    """
+    Lorentzian function where the area under the curve equals intensity I,
+    regardless of linewidth w.
+
+    Parameters
+    ----------
+    v : float
+        Frequency at which to evaluate the function (Hz).
+    v0 : float
+        Center frequency of the peak (Hz).
+    I : float
+        Total area under the peak (i.e., integrated intensity).
+    w : float
+        Full width at half maximum (FWHM) in Hz.
+
+    Returns
+    -------
+    float
+        Intensity at frequency v.
+    """
+    A = (I * w) / (2 * math.pi)
+    return A / ((0.5 * w) ** 2 + (v - v0) ** 2)
+
 
 
 def lorentz(v, v0, I, w):

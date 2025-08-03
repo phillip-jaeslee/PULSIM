@@ -20,7 +20,7 @@ df = np.linspace(-BW/2, BW/2, num=N)
 M = np.tile(M_equilibrium, (len(df), 1)).T
 M = M.astype(float)
 
-num_pulse = 3
+num_pulse = 1
 
 df_temp = np.ndarray(shape=(num_pulse, 1, N))
 RF_temp = np.ndarray(shape=(num_pulse, 1, N))
@@ -31,12 +31,14 @@ file_path = 'wave/HypSec'
 #file_path = 'wave/GaussCascadeQ5'
 #file_path = 'wave/sine.jhl'
 
+shape = "hypsec"
 
 # shaped Pulse (sine)
 i = 0
 #print(f'first pulse "{file_path}" running...')
 #M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] = torch_pulse.torch_shaped_pulse(M, np.pi / 2, "x", 0.6, "cos", N, BW, Gamma)
-M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi , "x", 1, file_path, BW, Gamma)
+#M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi , "x", 1, file_path, BW, Gamma)
+M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_shaped_pulse(M, np.pi, "x", 1, shape, N, BW, Gamma)
 #M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] = torch_pulse.torch_hard_pulse(M, np.pi/2, "x", 0.02, N, BW, Gamma)
 """
 # hard Pulse
@@ -111,13 +113,14 @@ axs[2].set_ylabel('flip', fontsize=label_font_size, fontname=font_name)
 axs[2].tick_params(axis='both', labelsize=ticks_font_size)
 axs[2].legend(loc="upper right")
 
-file_path = 'Hypesec_1000_60.xlsx'
+file_path = 'Excitation_profiles/Hypesec_1000_60.xlsx'
 #file_path = 'hard20_100.xlsx'
 #file_path = 'sin600_hard20_sin600_jsl.xlsx'
-#file_path = 'GaQ5_3m_20u_GaQ5rev_3m.xlsx'
+#file_path = 'Excitation_profiles/GaQ5_3m_20u_GaQ5rev_3m.xlsx'
 #file_path = 'hard20_100.xlsx'
 #file_path = 'sine600.xlsx'
 #file_path = 'sin600_180_sin600_jfy.xlsx'
+#file_path = 'Excitation_profiles/Eburp.xlsx'
 
 data = pd.read_excel(file_path, skiprows=5)
 data[';Offset[Hz]'] = data[';Offset[Hz]'].str.replace(':', '', regex=False)

@@ -4,6 +4,7 @@ wave/
 *.jhl
 *.jfy
 *.gif
+*.svg
 figure/
 Excitation_profiles/
 temp/

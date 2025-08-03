@@ -37,8 +37,91 @@ import matplotlib.pyplot as plt
 
 # TODO: possibly refactor plot routines to avoid repetitive code
 
+def mplplot_one(peaklist, ax, w=1, y_min=-0.01, y_max=0.15, points=800, limits=None, hertz=600, color=None):
+    peaklist.sort()
+    if limits:
+        l_limit, r_limit = low_high(limits)
+    else:
+        l_limit = peaklist[0][0] - 50
+        r_limit = peaklist[-1][0] + 50
+    x_ppm_up = 2.5
+    x_ppm_down = 3.3
+    l_limit = x_ppm_up * hertz
+    r_limit = x_ppm_down * hertz
+    x = torch.linspace(l_limit, r_limit, points)
+    y = add_lorentzians(x, peaklist, w)
+    x = x / hertz
+    x = x.numpy()
+    ax.plot(x, y, color=color, markersize=0.1, alpha=0.8)
+    ax.set_ylim(y_min, y_max)
+    ax.set_xlim(right=x_ppm_up, left=x_ppm_down) 
 
-def mplplot(peaklist, w=1, y_min=-0.01, y_max=1, points=800, limits=None, hidden=False):
+def mplplot_three_angles(peaklists_dict, w=1, y_min=-0.01, y_max=0.1, points=800, hertz=600, peptide="", save=True):
+    """
+    Plot three angles' peaklists on a single plot for comparison.
+
+    Parameters
+    ----------
+    peaklists_dict : dict
+        Dictionary with angle labels as keys and peaklists ([(freq, intensity), ...]) as values.
+        e.g., {"180": [(1234, 0.1), ...], "n60": [...], "p60": [...]}
+    w : float
+        Peak width at half height
+    y_min : float
+        Minimum intensity for the plot.
+    y_max : float
+        Maximum intensity for the plot.
+    points : int
+        Number of data points.
+    hertz : int
+        Spectrometer frequency
+    peptide : str
+        Peptide name for the title and saved filename
+    save : bool
+        If True, saves the figure to an SVG file
+    """
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    #colors = {"180": "blue", "n60": "green", "p60": "red"}
+
+    colors = {"273": "red", "283": "orange", "293": "yellow", "303": "green", "313": "blue"}
+
+    # Set x-range
+    x_ppm_up = 1 #2.5, 1.25
+    x_ppm_down = 4 # 4, 2.25
+    l_limit = x_ppm_up * hertz
+    r_limit = x_ppm_down * hertz
+    x = torch.linspace(r_limit, l_limit, points)
+
+    ax.set_ylim(y_min, y_max)
+    ax.set_xlim(right=x_ppm_up, left=x_ppm_down)
+    """
+    for angle, peaklist in peaklists_dict.items():
+        peaklist.sort()
+        y = add_lorentzians(x, peaklist, w)
+        x_ppm = (x / hertz).numpy()
+        ax.plot(x_ppm, y, label=angle, color=colors.get(angle, None), alpha=0.8, linewidth=0.8)
+    """
+    for temperature, peaklist in peaklists_dict.items():
+        peaklist.sort()
+        y = add_lorentzians(x, peaklist, w)
+        x_ppm = (x / hertz).numpy()
+        ax.plot(x_ppm, y, label=temperature, color=colors.get(temperature, None), alpha=0.8, linewidth=0.8)
+    ax.set_xlabel("Chemical Shift (ppm)")
+    ax.set_ylabel("Intensity (a.u.)")
+    ax.set_title(f"{peptide} — Simulated Splitting")
+    ax.legend()
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f"Three_{hertz}MHz_{peptide}_splitting_FMWH_{w}_temperature_scaled.svg")
+        plt.close()
+    else:
+        plt.show()
+
+
+
+def mplplot(peaklist, w=5, y_min=-0.01, y_max=0.4, points=800, limits=None, hidden=False, hertz=600, angle="", peptide=""):
     """
     A matplotlib plot of the simulated lineshape for a peaklist.
 
@@ -65,20 +148,25 @@ def mplplot(peaklist, w=1, y_min=-0.01, y_max=1, points=800, limits=None, hidden
         Arrays for frequency (x) and intensity (y) for the simulated lineshape.
     """
     peaklist.sort()
+    print(peaklist)
     if limits:
         l_limit, r_limit = low_high(limits)
     else:
         l_limit = peaklist[0][0] - 50
         r_limit = peaklist[-1][0] + 50
+    l_limit = 0.6 * hertz
+    r_limit = 1.5 * hertz
     x = torch.linspace(l_limit, r_limit, points)
     plt.ylim(y_min, y_max)
     plt.gca().invert_xaxis()  # reverses the x axis
     y = add_lorentzians(x, peaklist, w)
     # noinspection PyTypeChecker
-    lines = plt.plot(x, y)
+    x = x / hertz
+    lines = plt.plot(x, y, lw=0.5)
     print(lines)
     if not hidden:
-        plt.show()
+        plt.savefig(f"{hertz}MHz_{peptide}_{angle}_splitting_FMWH_{w}.svg")
+        plt.close()
     return x, y
 
 
