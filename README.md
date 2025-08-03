@@ -23,10 +23,6 @@ git clone https://www.github.com/phillip-jaeslee/PULSIM
     * Work in progress
 * 0.0.2
     * Updated numpy into torch for better performance
-* 0.1.1
-    * Increased compatibility with google Colaboratory
-* 0.2.1
-    * Updated shaped pulse list & Enhanced 3D Bloch simulation interface
 
 ## LICENSE
 
