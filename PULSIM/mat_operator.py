@@ -58,8 +58,8 @@ class torch_rot:
     def Rx(theta):
         return torch.stack([
             torch.stack([torch.ones_like(theta), torch.zeros_like(theta), torch.zeros_like(theta)], dim=0),
-            torch.stack([torch.zeros_like(theta), torch.cos(theta), torch.sin(theta)], dim=0),
-            torch.stack([torch.zeros_like(theta), -torch.sin(theta), torch.cos(theta)], dim=0)
+            torch.stack([torch.zeros_like(theta), torch.cos(theta), -torch.sin(theta)], dim=0),
+            torch.stack([torch.zeros_like(theta), torch.sin(theta), torch.cos(theta)], dim=0)
         ], dim=0).to(device)
 
     def Ry(theta):
@@ -71,8 +71,8 @@ class torch_rot:
 
     def Rz(theta):
         return torch.stack([
-            torch.stack([torch.cos(theta), torch.sin(theta), torch.zeros_like(theta)], dim=0),
-            torch.stack([-torch.sin(theta), torch.cos(theta), torch.zeros_like(theta)], dim=0),
+            torch.stack([torch.cos(theta), -torch.sin(theta), torch.zeros_like(theta)], dim=0),
+            torch.stack([torch.sin(theta), torch.cos(theta), torch.zeros_like(theta)], dim=0),
             torch.stack([torch.zeros_like(theta), torch.zeros_like(theta), torch.ones_like(theta)], dim=0)
         ], dim=0).to(device)
 
@@ -89,8 +89,8 @@ class cpu_rot:
 
     def Rx(flip):
         Rx = np.array ([[1, 0, 0],
-                    [0, np.cos(flip), np.sin(flip)],
-                    [0, -np.sin(flip), np.cos(flip)]])
+                    [0, np.cos(flip), -np.sin(flip)],
+                    [0, np.sin(flip), np.cos(flip)]])
         return Rx
 
     def Ry(flip):
@@ -100,8 +100,8 @@ class cpu_rot:
         return Ry
 
     def Rz(flip):
-        Rz = np.array ([[np.cos(flip), np.sin(flip), 0],
-                    [-np.sin(flip), np.cos(flip), 0],
+        Rz = np.array ([[np.cos(flip), -np.sin(flip), 0],
+                    [np.sin(flip), np.cos(flip), 0],
                     [0, 0, 1]])
         return Rz
 
@@ -109,3 +109,42 @@ class cpu_rot:
         Rot = np.array ([[np.cos(flip), np.sin(flip)],
                         [-np.sin(flip), np.cos(flip)]])
         return Rot
+
+class cpu_rot_batch:
+    """
+    Batched rotation operators based on NumPy, vectorized over a leading
+    n_offsets axis. Each Rx/Ry/Rz takes an array of angles, shape (n,),
+    and returns a stack of rotation matrices, shape (n, 3, 3), so that
+    R1 @ R2 (numpy's batched matmul for (...,3,3) arrays) chains n
+    independent rotations in one call instead of a Python loop.
+    """
+
+    def Rx(flip):
+        flip = np.asarray(flip, dtype=float)
+        c, s = np.cos(flip), np.sin(flip)
+        zero, one = np.zeros_like(flip), np.ones_like(flip)
+        return np.stack([
+            np.stack([one,  zero,  zero], axis=-1),
+            np.stack([zero,    c,    -s], axis=-1),
+            np.stack([zero,    s,     c], axis=-1),
+        ], axis=-2)
+
+    def Ry(flip):
+        flip = np.asarray(flip, dtype=float)
+        c, s = np.cos(flip), np.sin(flip)
+        zero, one = np.zeros_like(flip), np.ones_like(flip)
+        return np.stack([
+            np.stack([   c, zero,    s], axis=-1),
+            np.stack([zero,  one, zero], axis=-1),
+            np.stack([  -s, zero,    c], axis=-1),
+        ], axis=-2)
+
+    def Rz(flip):
+        flip = np.asarray(flip, dtype=float)
+        c, s = np.cos(flip), np.sin(flip)
+        zero, one = np.zeros_like(flip), np.ones_like(flip)
+        return np.stack([
+            np.stack([   c,   -s, zero], axis=-1),
+            np.stack([   s,    c, zero], axis=-1),
+            np.stack([zero, zero,  one], axis=-1),
+        ], axis=-2)

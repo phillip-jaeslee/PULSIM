@@ -3,7 +3,7 @@ import inflect
 
 def gyro_ratio(nucleus):
     global Gamma
-
+    # MHz/T kHz/mT
     if nucleus == 'H':
         Gamma = 42.577478518
     elif nucleus == 'D':
@@ -14,6 +14,14 @@ def gyro_ratio(nucleus):
         Gamma = 10.7084
     elif nucleus == '15N':
         Gamma = -4.316
+    elif nucleus == '17O':
+        Gamma = -5.772
+    elif nucleus == '19F':
+        Gamma = 40.078
+    elif nucleus == '31P':
+        Gamma = 17.235
+    elif nucleus == '35Cl':
+        Gamma = 4.176
     else:
         raise ValueError(f'{nucleus} may not support for the system.')
     

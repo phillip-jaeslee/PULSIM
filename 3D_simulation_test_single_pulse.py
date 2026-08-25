@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
-from bloch import bloch_rotate
-from bloch_pulse_simulation import sim_hard_pulse, sim_shaped_pulse, plot_3D_arrow_figure, sim_import_shaped_pulse, save_animation_to_gif, plot_3D_arrow_figure_old, plot_3D_arrow_with_pulse
+from PULSIM.bloch import bloch_rotate
+from PULSIM.simulate import sim_hard_pulse, sim_shaped_pulse, sim_import_shaped_pulse
+from bloch_pulse_simulation import plot_3D_arrow_figure, save_animation_to_gif, plot_3D_arrow_figure_old, plot_3D_arrow_with_pulse
 from IPython.display import Video, HTML, display
 from matplotlib.animation import FFMpegWriter
 
@@ -43,9 +44,13 @@ j = 0
 for i in range(num_arrows):
     j = (i - num_arrows/2) / num_arrows * np.pi /2
     #print(N_0)
-    shape = "iburp2"
-    #file_path = 'wave/HypSec'
-    Ms[i], temp_1, angle_temp_1, N_1 = sim_shaped_pulse(M, np.pi, angle, t_max_1, shape, N_0, int(t_max_1 * 1000), j , Gamma)
+    #shape = "iburp2"
+    #file_path = "untitled.csv"
+    file_path = 'wave/HypSec'
+    #Ms[i], temp_1, angle_temp_1, N_1 = sim_own_shaped_pulse(M, np.pi, angle, t_max_1, file_path, N_0, j , Gamma)
+    #Ms[i], temp_1, angle_temp_1, N_1 = sim_shaped_pulse(M, np.pi, angle, t_max_1, shape, N_0, int(t_max_1 * 1000), j , Gamma)
+    Ms[i], temp_1, angle_temp_1, N_1 = sim_import_shaped_pulse(M, np.pi, angle, t_max_1, file_path, N_0, j , Gamma)
+
     #print(N_1)
     #Ms[i], temp_2, angle_temp_2, N_2 = sim_hard_pulse(Ms[i], -np.pi, angle, t_max_2, N_1, int(t_max_2 * 1000), j, Gamma)
     #print(N_2)

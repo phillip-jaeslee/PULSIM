@@ -1,8 +1,12 @@
 import numpy as np
 import numpy.matlib 
-from bloch import torch_bloch_rotate
+from PULSIM.bloch import torch_bloch_rotate
 import matplotlib.pyplot as plt
-from pulse import *
+
+from PULSIM.rf_shape import RFShape
+from PULSIM.backend import TorchBackend
+from PULSIM.pulse_oo import Pulse
+
 from visualization import plot_pulse, save_figure
 
 
@@ -27,23 +31,41 @@ t_max_temp = np.ndarray(shape=(3, 1, N))
 Ns = np.ndarray(shape=(3, 1))
 file_path = 'wave/sine.jhl'
 
-
-# shaped Pulse (sine)
 i = 0
-print(f'first pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+print(f"first pulse {file_path} running...")
+shape = RFShape.create("file", path=file_path, duration=0.6)
+pulse = Pulse(shape, np.pi / 2, axis="x", backend=TorchBackend(Gamma=Gamma))
+df_temp[i] = np.linspace(-BW / 2, BW / 2, num=shape.points)
+M = pulse.apply(M, df_temp[i])
+RF_temp[i] = np.abs(pulse.calibrated_rf())
+RF_angle_temp[i] = shape.xy[:, 1]
+t_max_temp[i] = 0.6
+Ns[i] = shape.points
 
-# hard Pulse
 i += 1
 print("second pulse running...")
-M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] = torch_pulse.torch_hard_pulse(M, np.pi, "x", 0.02, N, BW, Gamma)
+shape = RFShape.create("hard", duration=0.02, points=N)
+pulse = Pulse(shape, np.pi, axis="x", backend=TorchBackend(Gamma=Gamma))
+df_temp[i] = np.linspace(-BW / 2, BW / 2, num=N)
+M = pulse.apply(M, df_temp[i])
+RF_temp[i] = np.abs(pulse.calibrated_rf().reshape(1, -1))
+RF_angle_temp[i] = 0.0 if np.pi > 0 else (180.0 if np.pi < 0 else 0.0)
+t_max_temp[i] = 0.02
+Ns[i] = N
 
 
 file_path = 'wave/sine.jhl'
 # shaped Pulse (sine)
 i += 1
-print(f'thrid pulse "{file_path}" running...')
-M, df_temp[i], RF_temp[i], RF_angle_temp[i], t_max_temp[i], Ns[i] =torch_pulse.torch_import_shaped_pulse(M, np.pi / 2, "x", 0.6, file_path, BW, Gamma)
+print(f"third pulse {file_path} running...")
+shape = RFShape.create("file", path=file_path, duration=0.6)
+pulse = Pulse(shape, np.pi / 2, axis="x", backend=TorchBackend(Gamma=Gamma))
+df_temp[i] = np.linspace(-BW / 2, BW / 2, num=shape.points)
+M = pulse.apply(M, df_temp[i])
+RF_temp[i] = np.abs(pulse.calibrated_rf())
+RF_angle_temp[i] = shape.xy[:, 1]
+t_max_temp[i] = 0.6
+Ns[i] = shape.points
 
 
 RF_t = np.append(RF_temp[0, :, :], RF_temp[1, :, :])

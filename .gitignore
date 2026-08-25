@@ -8,3 +8,8 @@ wave/
 figure/
 Excitation_profiles/
 temp/
+tutorial_figures/
+test/
+pulsim.egg-info/
+docs/
+.pytest_cache/

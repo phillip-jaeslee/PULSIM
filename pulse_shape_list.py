@@ -517,14 +517,14 @@ def plot_pulse(pulse, title="Pulse Shape", xlabel="Points", ylabel="Amplitude"):
     plt.plot(pulse.real, label="Real")
     if np.iscomplexobj(pulse):
         plt.plot(pulse.imag, label="Imag", linestyle="--")
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.title(title, fontname="Arial")
+    plt.xlabel(xlabel, fontname="Arial")
+    plt.ylabel(ylabel, fontname="Arial")
     plt.grid(True)
     plt.legend()
     plt.show()
 
 #pulse = sincospulse()
-pulse = HYPSEC_pulse(duration=2, points=1000)
-#plot_pulse(pulse, title="Hermite Pulse")
+#pulse = HYPSEC_pulse(duration=2, points=1000)
+#plot_pulse(pulse, title="Hyperbolic Secant Pulse")
 

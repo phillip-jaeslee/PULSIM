@@ -1,208 +1,18 @@
-import torch
+"""
+bloch_pulse_simulation.py -- 3D Bloch-sphere plotting/animation helpers.
+
+The sim_* functions that used to live here moved to PULSIM/simulate.py
+during the nmr_core package restructure (they're physics/library code;
+this file is matplotlib driver-side code and doesn't belong in the
+installable package).
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 from matplotlib import cm
-from bloch import bloch_rotate
-from file_import import import_file
-from mat_operator import *
-from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import gridspec
-from pulse_shape_list import *
-
-
-
-def sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma):
-
-    ## composite pulse simulator
-    """
-    M, N_final = sim_import_shaped_pulse(M, flip, angle, t_max, file_path, N_init, phi, Gamma)
-    parameters 
-    input:
-    M               - magnetization vector
-    flip            - flip angle (rad)
-    angle           - flip angle position (x, y, z)
-    t_max           - duration of pulse
-    file_path       - file path for composite pulse
-    N_init          - initial number of points
-    phi             - deviation from the on-resonance
-    Gamma           - Gyromagnetic ratio of the nucleus
-    output:
-    M               - final magnetization vector in time
-    RF              - pulse amplitude in time
-    RF_angle        - pulse phase in time
-    N_final         - final number of points
-    """
-    # Import shaped pulse data (Bruker pulse reader)
-    xy_array = import_file(file_path)
-
-    # Original number of points and time scaling
-    N = len(xy_array)
-    dt = t_max / N
-    t = np.linspace(-N / 2 * dt, N / 2 * dt, N)
-
-    # Target number of points
-    target_N = int(t_max * 1000)
-    t_resampled = np.linspace(-t_max / 2, t_max / 2, target_N)
-
-    # Resample the xy_array to the t_max * 1000 points
-    xy_resampled = np.zeros((target_N, 2), dtype=np.float64)
-    xy_resampled[:, 0] = CubicSpline(t, xy_array[:, 0])(t_resampled)
-    xy_resampled[:, 1] = CubicSpline(t, xy_array[:, 1])(t_resampled)
-    
-    # Prepare RF array
-    RF_array = np.zeros(np.shape(xy_resampled), dtype=np.complex128)
-
-    for k in range(target_N):
-        xy_temp = np.zeros((2, 1), dtype=float)
-        xy_temp = cpu_rot.Rot(xy_resampled[k, 1] * np.pi / 180) @ np.array([1, 0]).T
-        RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
-
-    # Check whether adiabatic pulse or not
-    pul_type = ""
-    if (max(xy_resampled[:,1])>=350):
-        pul_type = "adiabatic"
-    RF = xy_resampled[:, 0] * RF_array[:, 1]
-    if (pul_type == "adiabatic"):
-        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt) * 2
-    else:
-        RF = (flip) * RF/ np.sum(RF) / (2*np.pi*Gamma*dt)
-    
-    RF_angle = np.array(xy_resampled[:, 1])
-
-    # Add pulse to the magntization
-    for n in range(N_init, N_init + target_N):
-        if n == 0:
-            M[:, n] = M[:, n]
-        else:
-            M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), phi/Gamma], angle)
-
-    # Update the number of points
-    N_final = N_init + target_N
-    RF = abs(RF)
-    return M, RF, RF_angle, N_final
-
-
-def sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, phi, Gamma):
-
-    ## shaped pulse simulator
-    """
-    M, N_final = sim_shaped_pulse(M, flip, angle, t_max, shape, N_init, N, phi, Gamma)
-    parameters 
-    input:
-    M               - magnetization vector
-    flip            - flip angle (rad)
-    angle           - flip angle position (x, y, z)
-    t_max           - duration of pulse
-    shape           - shape of pulse ("sinc", "cos", "sinc2p") #TODO: expand pulse type (Hermite, Gaussian, G4, Q3, Eburp, Seduce, etc.)
-    N_init          - initial number of points
-    N               - number of points for the shaped pulse
-    phi             - deviation from the on-resonance
-    Gamma           - Gyromagnetic ratio of the nucleus
-    output:
-    M               - final magnetization vector in time
-    RF              - pulse amplitude in time
-    RF_angle        - pulse phase in time
-    N_final         - final number of points
-    """
-    dt = t_max / N
-    init = -N/2
-    final = N/2
-    t = np.arange(init, final, 1) * dt
-
-    shape_funcs = {
-        "sinc":         lambda: np.hamming(N).T * np.sinc(t),
-        "cos":          lambda: np.hamming(N).T * np.cos(t),
-        "sinc2p":       lambda: np.sinc(2 * np.pi * t),
-        "eburp1":       lambda: E_BURP_1_pulse(duration=t_max, points=N),
-        "eburp2":       lambda: E_BURP_2_pulse(duration=t_max, points=N),
-        "iburp1":       lambda: I_BURP_1_pulse(duration=t_max, points=N),
-        "iburp2":       lambda: I_BURP_2_pulse(duration=t_max, points=N),
-        "uburp":        lambda: U_BURP_pulse(duration=t_max, points=N),
-        "reburp":       lambda: RE_BURP_pulse(duration=t_max, points=N),
-        "gausscasG3":   lambda: GAUSSCASCADE_G3_pulse(duration=t_max, points=N),
-        "gausscasG4":   lambda: GAUSSCASCADE_G4_pulse(duration=t_max, points=N),
-        "gausscasQ3":   lambda: GAUSSCASCADE_Q3_pulse(duration=t_max, points=N),
-        "gausscasQ5":   lambda: GAUSSCASCADE_Q5_pulse(duration=t_max, points=N),
-        "hermite":      lambda: HERMITE_pulse(duration=t_max, points=N),
-        "seduce1":      lambda: SEDUCE_1_pulse(duration=t_max, points=N),
-        "sneeze":       lambda: SNEEZE_pulse(duration=t_max, points=N),
-        "qsneeze":      lambda: QSNEEZE_pulse(duration=t_max, points=N),
-        "esnob":        lambda: eSNOB_pulse(duration=t_max, points=N),
-        "i2snob":       lambda: i2SNOB_pulse(duration=t_max, points=N),
-        "i3snob":       lambda: i3SNOB_pulse(duration=t_max, points=N),
-        "rsnob":        lambda: rSNOB_pulse(duration=t_max, points=N),
-        "dsnob":        lambda: dSNOB_pulse(duration=t_max, points=N),
-        "hypsec":       lambda: HYPSEC_pulse(duration=t_max, points=N),
-        "swrl11":       lambda: SWIRL11_pulse(duration=t_max, points=N),
-        "swrl12":       lambda: SWIRL12_pulse(duration=t_max, points=N),
-        "swrl17":       lambda: SWIRL17_pulse(duration=t_max, points=N)
-    }
-
-    try:
-        RF_org = shape_funcs[shape]()
-    except KeyError:
-        raise ValueError(f"Unknown shape '{shape}'. Available shapes: {list(shape_funcs)}")
-    
-    RF_angle = np.ones((1, int(N)))
-    # If pulse is real-only
-    if np.isrealobj(RF_org):
-        RF_angle = np.where(RF_org >= 0, 0.0, 180.0)
-        RF = (flip) * RF_org/np.sum(RF_org) / (2*np.pi*Gamma*dt)
-
-    # If pulse has complex components
-    else:
-        phase_rad = np.angle(RF_org)            # returns −π to π
-        RF_angle = (-np.degrees(phase_rad)) % 360      # convert to degrees
-        RF = (flip) * RF_org/np.sum(RF_org) / (2*np.pi*Gamma*dt) *2
-
-    for n in range(N_init, N_init + N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[n-N_init]), np.imag(RF[n-N_init]), phi/Gamma], angle)
-
-    N_final = N + N_init
-    RF = abs(RF)
-    return M, RF, RF_angle, N_final
-
-def sim_hard_pulse(M, flip, angle, t_max, N_init, N, phi, Gamma):
-
-    ## hard pulse simulator
-    """
-    M, df, RF, t_max = sim_hard_pulse(M, flip, angle, t_max, N, Gamma)
-    parameters 
-    input:
-    M               - magnetization vector 
-    N               - the number of points of the pulse
-    dt              - size of each step
-    angle           - flip angle position (x, y, z)
-    flip            - flip angle (rad)
-    t_max           - duration of pulse
-    output:
-    M               - final magnetization vector in time
-    RF              - pulse amplitude in time
-    RF_angle        - pulse phase in time
-    N_final         - final number of points
-    """
-    dt = t_max / N
-    init = -N/2
-    final = N/2
-    t = np.arange(init, final-1, 1) * dt
-    RF = np.ones((1, int(N)))
-    RF = (flip) * RF/np.sum(RF) / (2*np.pi*Gamma*dt)
-    RF_angle = np.ones((1, int(N)))
-
-    if flip > 0:
-        RF_angle = RF_angle * 0
-    elif flip < 0:
-        RF_angle = RF_angle * 180
-    for n in range(N_init, N_init + N):
-        M[:, n]  = bloch_rotate(M[:, n-1], dt, [np.real(RF[0, n-N_init]), np.imag(RF[0, n-N_init]), phi/Gamma], angle)
-
-    N_final = N + N_init
-    RF = abs(RF)
-    return M, RF, RF_angle, N_final
-
 
 def plot_3D_arrow_figure_old(Ms, num_arrows, N, color, interval):
     
@@ -386,7 +196,8 @@ def save_animation_to_gif(ani, file_name, fps):
 
 
 def plot_3D_arrow_with_pulse(Ms, pulse_time, pulse_amplitude, pulse_phase, num_arrows, N, color="viridis", interval=1):
-
+    font_name = "Arial"
+    pulse_amplitude = np.abs(pulse_amplitude)
     ## plot 3D bloch sphere animation with pulse
     """
     plot_3D_arrow_with_pulse(Ms, pulse_time, pulse_amplitude, phase, num_arrows, N, color, interval=1)
@@ -455,14 +266,14 @@ def plot_3D_arrow_with_pulse(Ms, pulse_time, pulse_amplitude, pulse_phase, num_a
 
     def update(frame):
         ax3d.cla()
-        ax3d.set_xlim(-1.5, 1.5)
-        ax3d.set_ylim(-1.5, 1.5)
-        ax3d.set_zlim(-1.5, 1.5)
+        ax3d.set_xlim(-1.0, 1.0)
+        ax3d.set_ylim(-1.0, 1.0)
+        ax3d.set_zlim(-1.0, 1.0)
         ax3d.set_box_aspect([1, 1, 1])
-        ax3d.set_title(f"Time: {frame} µs")
-        ax3d.set_xlabel('X')
-        ax3d.set_ylabel('Y')
-        ax3d.set_zlabel('Z')
+        ax3d.set_title(f"Time: {frame} µs", fontname=font_name)
+        ax3d.set_xlabel('X', fontname=font_name)
+        ax3d.set_ylabel('Y', fontname=font_name)
+        ax3d.set_zlabel('Z', fontname=font_name)
 
         draw_sphere(ax3d)
 
@@ -483,14 +294,13 @@ def plot_3D_arrow_with_pulse(Ms, pulse_time, pulse_amplitude, pulse_phase, num_a
         else:
             ax_pulse.set_ylim(min(pulse_amplitude) * 1.4, max(pulse_amplitude) * 1.4)
         ax_phase.set_yticks(np.arange(0, 370, 60))
-        ax_pulse.set_ylabel("Amplitutde")
-        ax_pulse.set_xlabel("Time (µs)")
-        ax_phase.set_ylabel("Phase")
-        ax_phase.set_xlabel("Time (µs)")
+        ax_pulse.set_ylabel("Amplitutde", fontname=font_name)
+        ax_pulse.set_xlabel("Time (µs)", fontname=font_name)
+        ax_phase.set_ylabel("Phase", fontname=font_name)
+        ax_phase.set_xlabel("Time (µs)", fontname=font_name)
 
     ani = FuncAnimation(fig, update, frames=range(N), interval=interval)
     #plt.tight_layout()
     plt.show()
     return ani
-
 
