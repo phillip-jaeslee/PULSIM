@@ -21,7 +21,9 @@ Here they collapse into one registry::
     shape.envelope()    # complex ndarray, length == points
     shape.amplitude_profile   # |envelope|
     shape.phase_profile       # degrees, 0..360, existing sign convention
-    shape.is_adiabatic        # drives the historical "x2" scaling
+    shape.modulation          # "amplitude" or "phase" -- derived from the array
+    shape.intent              # declared, e.g. "adiabatic"; None if undeclared
+    shape.calibration_mode    # "area" or "adiabatic" -- derived from intent
 
 DELIBERATE NON-GOAL
 -------------------
@@ -44,6 +46,8 @@ import numbers
 from abc import ABC, abstractmethod
 
 import numpy as np
+import warnings
+
 from scipy.interpolate import CubicSpline
 from PULSIM.file_import import import_file
 
@@ -191,18 +195,42 @@ class RFShape(ABC):
         """
         return (-np.degrees(np.angle(self.envelope()))) % 360.0
 
+    #: How this pulse's RF strength must be determined. DECLARED, never
+    #: inferred: a complex envelope does not imply adiabatic (sincos sweeps
+    #: only 459 degrees, non-monotonically), and a phase column touching 350
+    #: degrees does not either -- two files from the same Bruker family, both
+    #: declared Excitation, land on opposite sides of that threshold.
+    #: Mirrors Bruker's SHAPE_EXMODE. The operation performed (inversion,
+    #: excitation) is a separate question -- a half-passage adiabatic pulse
+    #: excites rather than inverts -- and is not recorded here.
+
+    intent = None
+
+    @property
+    def modulation(self):
+        """"amplitude" or "phase" -- a fact about the array, safe to derive"""
+        return "phase" if np.any(self.envelope().imag != 0) else "amplitude"
+
+    @property
+    def calibration_mode(self):
+        """"area" (flip angle -> signed pulse area) or "adiabatic"
+        (sweep rate + Q). Derived from intent so there is one source of truth."""
+        return "adiabatic" if self.intent == "adiabatic" else "area"        
+
     @property
     def is_adiabatic(self) -> bool:
-        """
-        Whether this shape sweeps phase through a full turn.
+        """Deprecated: use ``intent == "adiabatic"`` or ``calibration_mode``.
 
-        Names the condition that currently drives the unexplained ``* 2``
-        scaling in three different places.  For analytic shapes that is
-        "the waveform is complex"; ``FileShape`` overrides it with the
-        historical ">= 350 degrees somewhere in the phase column" rule.
+        Kept for one release so existing callers keep working. It no longer
+        guesses from the waveform: it reports what the shape declares.
         """
-        return bool(np.any(np.abs(self.envelope().imag) > 0))
-
+        warnings.warn(
+            "RFShape.is_adiabatic is deprecated; use shape.intent == 'adiabatic' "
+            "or shape.calibration_mode instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.intent == "adiabatic"
     def sample_times(self) -> np.ndarray:
         """
         Time grid the engine steps over: ``arange(-N/2, N/2) * dt``.
@@ -803,13 +831,14 @@ class Swirl17(AnalyticShape):
 
 class HyperbolicSecant(AnalyticShape):
     name = "hypsec"
+    intent = "adiabatic"
     """
     Adiabatic hyperbolic secant (Silver, Joseph & Hoult, JMR 59, 347 (1984)).
 
-    Complex-valued, so ``is_adiabatic`` is True and the historical ``* 2``
-    scaling applies once ``Pulse`` takes over calibration.
+    Declares intent = "adiabatic": RF strength comes from the sweep rate and
+    the adiabaticity factor Q, not from a flip angle.
 
-    Extra params: truncate, sweepwidth, beta, mu, low_to_high.
+    Extra params: truncate, beta, mu, low_to_high.
     """
     default_duration = 4.0  # matches HYPSEC_pulse's own default
     def _build(self):
@@ -862,6 +891,8 @@ class HyperbolicSecant(AnalyticShape):
 # J. Magn. Reson. 67, 376-381 (1986).
 class SinCos(AnalyticShape):
     name = "sincos"
+    intent = "adiabatic"
+
     """SinCos adiabatic pulse (M.R. Bendall & D.T. Pegg, J. Magn. Reson. 67,
     376-381 (1986)). Extra params: factor (phase amplitude factor, 0-16,
     default 4.0), full_passage (bool, default True), sweep_dir (+1 = high to
@@ -892,6 +923,7 @@ class SinCos(AnalyticShape):
 
 class Wurst(AnalyticShape):
     name = "wurst"
+    intent = "adiabatic"
     """WURST adiabatic pulse (E. Kupce & R. Freeman, J. Magn. Reson. A 115,
     273-276 (1995)). Amplitude envelope 1 - |sin(pi*x)|^n (x centred on the
     pulse, -0.5 -> 0.5), swept linearly in frequency across sweep_width.
@@ -915,6 +947,7 @@ class Wurst(AnalyticShape):
 
 class SmoothedChirp(AnalyticShape):
     name = "smoothedchirp"
+    intent = "adiabatic"
     """Smoothed chirp adiabatic pulse (J.-M. Boehlen & G. Bodenhausen,
     J. Magn. Reson. A 102, 293 (1993)). Linear frequency sweep across
     sweep_width, with the amplitude edges tapered by a raised-cosine window
@@ -946,6 +979,7 @@ class SmoothedChirp(AnalyticShape):
 
 class CompositeSmoothedChirp(AnalyticShape):
     name = "compositesmoothedchirp"
+    intent = "adiabatic"
     """Composite smoothed-chirp pulse: several smoothed-chirp segments of
     length element_duration concatenated back-to-back, each sweeping the
     full sweep_width, with adjacent segments alternating by 180 deg phase
@@ -995,6 +1029,7 @@ class CompositeSmoothedChirp(AnalyticShape):
 
 class TanhTan(AnalyticShape):
     name = "tanhtan"
+    intent = "adiabatic"
     """Tanh/Tan adiabatic pulse (M. Garwood & Y. Ke, J. Magn. Reson. 94, 511
     (1991); R.S. Staewen et al., Invest. Radiol. 25, 559 (1990)). Amplitude
     envelope tanh(zeta*(1-|x|)) and frequency sweep (SW/2)*tan(kappa*x)/
@@ -1039,6 +1074,7 @@ def _ca_offset_from_amplitude(amp_env: np.ndarray, sweep_width: float, sweep_dir
 
 class CaWurst(AnalyticShape):
     name = "cawurst"
+    intent = "adiabatic"
     """Constant-adiabaticity WURST pulse (Tannus & Garwood, J. Magn. Reson.
     A 120, 133-137 (1996)). Same amplitude envelope as Wurst; the frequency
     sweep is reparametrized via _ca_offset_from_amplitude instead of being
@@ -1061,6 +1097,7 @@ class CaWurst(AnalyticShape):
 
 class CaSmoothedChirp(AnalyticShape):
     name = "casmoothedchirp"
+    intent = "adiabatic"
     """Constant-adiabaticity smoothed-chirp pulse (Tannus & Garwood, J.
     Magn. Reson. A 120, 133-137 (1996)). Same amplitude envelope as
     SmoothedChirp (raised-cosine edge taper, flat middle); the frequency
@@ -1088,6 +1125,7 @@ class CaSmoothedChirp(AnalyticShape):
 
 class CaGauss(AnalyticShape):
     name = "cagauss"
+    intent = "adiabatic"
     """Constant-adiabaticity Gaussian pulse (Tannus & Garwood, J. Magn.
     Reson. A 120, 133-137 (1996)). Gaussian amplitude envelope truncated at
     trunclevel%; frequency sweep reparametrized via _ca_offset_from_amplitude
@@ -1112,6 +1150,7 @@ class CaGauss(AnalyticShape):
 
 class CaLorentz(AnalyticShape):
     name = "calorentz"
+    intent = "adiabatic"
     """Constant-adiabaticity Lorentzian pulse (Tannus & Garwood, J. Magn.
     Reson. A 120, 133-137 (1996)). Lorentzian amplitude envelope truncated
     at trunclevel%; frequency sweep reparametrized via
@@ -1136,6 +1175,7 @@ class CaLorentz(AnalyticShape):
 
 class CaPowHsec(AnalyticShape):
     name = "capowhsec"
+    intent = "adiabatic"
     """Constant-adiabaticity power-hyperbolic-secant pulse (Tannus &
     Garwood, J. Magn. Reson. A 120, 133-137 (1996)). Generalizes the
     Silver-Hoult hyperbolic secant (see HyperbolicSecant/HypSec) to a
@@ -1231,12 +1271,13 @@ class FileShape(RFShape):
     and the torch path builds ``cos(-a) + i sin(-a)`` — the same thing.
     """
 
-    def __init__(self, path, duration=None, amplitude=1.0, points=None, resample_to=None, **params):
+    def __init__(self, path, duration=None, amplitude=1.0, points=None, resample_to=None, intent=None, **params):
         if points is not None:
             raise TypeError(
                 "FileShape takes its point count from the file; do not pass points="
             )
         self.path = path
+        self.intent = intent # declared by the caller; read from the file header (SHAPE_EXMODE) once that lands
         xy = np.asarray(self._read(path), dtype=float)
         if resample_to is not None:
             xy = self._resample(xy, duration, resample_to)
@@ -1273,11 +1314,6 @@ class FileShape(RFShape):
         phasor = np.exp(-1j * np.deg2rad(phase_deg))
         return magnitude * phasor * self.amplitude
 
-    @property
-    def is_adiabatic(self) -> bool:
-        """Historical rule: a phase column reaching 350 deg means a full sweep."""
-        return bool(np.max(self.xy[:, 1]) >= 350)
-
     def __repr__(self):
         return (f"{type(self).__name__}(path={self.path!r}, points={self.points}, "
                 f"duration={self.duration})")
@@ -1286,11 +1322,9 @@ class CompositeCSVShape(FileShape):
     name = "composite"
     """
     A composite pulse exported as a plain CSV: a single amplitude column
-    ("1"), no phase column. Was sim_own_shaped_pulse's bespoke pandas
-    reader. Everything else -- resampling, phasor construction, the
-    "phase >= 350 deg -> adiabatic" rule -- is inherited unchanged from
-    FileShape; a CSV with no phase column always has phase 0, so
-    is_adiabatic naturally comes out False without needing an override.
+    ("1"), no phase column. Everything else -- resampling and phasor
+    construction -- is inherited unchanged from FileShape. Like any file
+    shape it declares no intent unless the caller supplies one.
     """
 
     @staticmethod

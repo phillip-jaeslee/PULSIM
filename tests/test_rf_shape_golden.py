@@ -144,8 +144,10 @@ def test_file_shape_matches_legacy(golden, params, key):
     np.testing.assert_allclose(shape.envelope(), expected, rtol=1e-13, atol=1e-15)
     np.testing.assert_allclose(shape.phase_profile, golden[f"phase/file_{key}"],
                                rtol=1e-13, atol=1e-12)
-    assert shape.is_adiabatic == bool(golden[f"adiabatic/file_{key}"])
-
+    # NOTE: golden's "adiabatic/file_*" key recorded the old ">= 350 deg phase"
+    # verdict. That rule is gone -- it called Burbop-180.1 and BadCop1
+    # adiabatic, and neither is a frequency sweep. Intent is declared now, so
+    # the key is vestigial and will disappear the next time make_golden runs.
 
 def test_file_fixtures_can_police_the_phasor_sign(golden):
     """
@@ -161,26 +163,6 @@ def test_file_fixtures_can_police_the_phasor_sign(golden):
         if np.any(np.abs(np.sin(np.deg2rad(ph))) > 1e-6):
             interesting = True
     assert interesting, "no file fixture has an off-axis phase; sign is untested"
-
-
-def test_file_fixtures_straddle_the_adiabatic_threshold(golden):
-    """
-    Guard on the guard, part two: the fixtures must include a waveform whose
-    peak phase falls between 250 and 350 degrees, otherwise the ">= 350" rule
-    in FileShape.is_adiabatic could be moved a long way without any test
-    noticing.
-    """
-    peaks = []
-    for key in FILE_KEYS:
-        if f"phase/file_{key}" not in golden:
-            continue
-        peaks.append(float(np.max(golden[f"phase/file_{key}"])))
-    assert any(250 <= p < 350 for p in peaks), (
-        f"no fixture pins the 350 deg threshold from below; peak phases {peaks}"
-    )
-    assert any(350 <= p < 359.95 for p in peaks), (
-        f"no fixture pins the 350 deg threshold from above; peak phases {peaks}"
-    )
 
 
 def test_sample_times_matches_legacy(params):
@@ -273,8 +255,33 @@ def test_file_shape_rejects_explicit_points():
         FileShape(path=wave, duration=0.6, points=1000)
 
 
-def test_is_adiabatic_flags_complex_waveforms(params):
-    """The condition behind the unexplained '* 2' scaling, now named."""
+def test_adiabatic_intent_is_declared_not_guessed(params):
+    """Replaces test_is_adiabatic_flags_complex_waveforms.
+
+    The old rule inferred "adiabatic" from the waveform: a complex envelope for
+    analytic shapes, peak phase >= 350 deg for files. Both were wrong on real
+    data -- sincos sweeps only 459 deg non-monotonically and is not a chirp,
+    and the 350 deg rule flagged Burbop-180.1 and BadCop1, which are
+    optimal-control pulses. Intent is declared by the shape now.
+    """
     t_max, N = params
-    assert RFShape.create("hypsec", duration=t_max, points=N).is_adiabatic
-    assert not RFShape.create("eburp1", duration=t_max, points=N).is_adiabatic
+    hypsec = RFShape.create("hypsec", duration=t_max, points=N)
+    eburp1 = RFShape.create("eburp1", duration=t_max, points=N)
+
+    assert hypsec.intent == "adiabatic"
+    assert eburp1.intent is None
+    assert hypsec.calibration_mode == "adiabatic"
+    assert eburp1.calibration_mode == "area"
+
+
+def test_file_shape_does_not_guess_intent():
+    """A file says nothing about its intent unless told -- and a caller can tell
+    it. Burbop-180.1 is the case that matters: the old 350 deg rule called it
+    adiabatic, and it is an optimal-control pulse, not a sweep."""
+    wave = os.path.join(os.path.dirname(HERE), "wave", "Burbop-180.1")
+    if not os.path.exists(wave):
+        pytest.skip("wave/Burbop-180.1 is not distributed with the repository (item 0-1)")
+
+    assert FileShape(path=wave, duration=0.6).intent is None
+    assert FileShape(path=wave, duration=0.6).calibration_mode == "area"
+    assert FileShape(path=wave, duration=0.6, intent="adiabatic").calibration_mode == "adiabatic"

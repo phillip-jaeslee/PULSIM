@@ -39,8 +39,13 @@ def measure(name):
         return {"build_error": f"{type(e).__name__}: {e}"}
 
     env = shape.envelope()
+    # NOTE: the committed calibration_baseline.json was captured BEFORE the
+    # calibration redesign and records the behaviour of that older code. It is a
+    # historical record -- do not regenerate it. This script is kept runnable so
+    # a fresh snapshot can be taken at a later checkpoint if one is wanted.
     record["modulation"] = "complex" if np.any(env.imag != 0) else "real"
-    record["is_adiabatic"] = bool(shape.is_adiabatic)
+    record["intent"] = shape.intent
+    record["calibration_mode"] = shape.calibration_mode
     record["signed_integral"] = float(np.real(env.sum()) / len(env) / np.abs(env).max())
     record["cancellation_ratio"] = float(np.abs(env.sum()) / np.abs(env).sum())
 

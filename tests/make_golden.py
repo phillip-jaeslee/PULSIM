@@ -53,14 +53,15 @@ N = 1000
 
 # Two imported waveforms, chosen deliberately:
 #   sine.jhl      - what the real driver scripts use; phase column is 0/180 only
-#   Burbop-180.1  - phase sweeps the full 0..360, and trips the >=350 adiabatic
-#                   rule. Without this one the fixture cannot tell exp(-i.theta)
-#                   from exp(+i.theta), because for phases of 0 and 180 they are
-#                   identical. (Found by mutation-testing the suite.)
-#   Bip720,50,20.1 - max phase 331.4 deg, i.e. between 250 and 350. This is the
-#                   only fixture that pins the ">= 350" adiabatic threshold from
-#                   below; with just the other two, moving the constant to 250
-#                   changed no test result. (Also found by mutation testing.)
+#   Burbop-180.1  - phase sweeps the full 0..360. Without this one the fixture
+#                   cannot tell exp(-i.theta) from exp(+i.theta), because for
+#                   phases of 0 and 180 they are identical. (Found by
+#                   mutation-testing the suite.)
+#   Bip720,50,20.1 - max phase 331.4 deg: a third, independent phase profile.
+#                   It was originally chosen to pin the ">= 350 deg -> adiabatic"
+#                   threshold from below; that rule has since been deleted (intent
+#                   is declared, not inferred), so it now earns its place only as
+#                   phase-profile variety.
 WAVE_FILES = {
     "sine": "sine.jhl",
     "burbop180": "Burbop-180.1",
@@ -123,18 +124,19 @@ def legacy_rf_angle(RF_org):
 def legacy_file_envelope(file_path):
     """
     The phasor loop from pulse.cpu_pulse.import_shaped_pulse, verbatim.
-    Returns (envelope, is_adiabatic).
+    Returns the complex envelope.
+
+    The old ">= 350 deg -> adiabatic" classification that used to live here is
+    gone: it called Burbop-180.1 and BadCop1 adiabatic, and both are
+    optimal-control pulses rather than frequency sweeps. Intent is declared by
+    the shape now, never inferred from the waveform.
     """
     xy_array = import_file(file_path)
     RF_array = np.zeros(np.shape(xy_array), dtype=np.complex128)
-    pul_type = ""
     for k in range(len(xy_array)):
         xy_temp = cpu_rot.Rot(xy_array[k, 1] * np.pi / 180) @ np.array([1, 0]).T
         RF_array[k, 1] = complex(xy_temp[0], xy_temp[1])
-    if max(xy_array[:, 1]) >= 350:
-        pul_type = "adiabatic"
-    RF = xy_array[:, 0] * RF_array[:, 1]
-    return RF, (pul_type == "adiabatic")
+    return xy_array[:, 0] * RF_array[:, 1]
 
 
 def main():
@@ -158,12 +160,11 @@ def main():
         if not os.path.exists(path):
             print(f"  SKIPPED file import: {path} not found")
             continue
-        env, adiabatic = legacy_file_envelope(path)
+        env = legacy_file_envelope(path)
         data[f"shape/file_{key}"] = env
         data[f"phase/file_{key}"] = legacy_rf_angle(env)
-        data[f"adiabatic/file_{key}"] = np.array(adiabatic)
         data[f"filename/file_{key}"] = np.array(filename)
-        print(f"  {'file:' + key:12s} n={env.size:5d}  adiabatic={adiabatic}")
+        print(f"  {'file:' + key:12s} n={env.size:5d}")
 
     out = os.path.join(OUT_DIR, "shapes.npz")
     np.savez_compressed(out, **data)
