@@ -1,14 +1,15 @@
 """
 pulse_oo.py — Pulse: composition of an RFShape, a flip angle, and a Backend.
 
-Not yet used by anything. Once it's proven equivalent to pulse.py's classes,
-a later step points the driver scripts at this instead and pulse.py's
-duplication gets deleted.
+The single calibration entry point: it turns a normalized RFShape into a
+physical RF field in mT, choosing the calibration strategy the shape
+requires (see calibration.py), then steps a magnetization through it.
 """
 
 import numpy as np
 
-from .backend import NumpyBackend
+from PULSIM.backend import NumpyBackend
+from PULSIM.calibration import AreaCalibration, signed_integral_of
 
 
 class Pulse:
@@ -31,16 +32,37 @@ class Pulse:
 
     def calibrated_rf(self):
         """
-        Scale the shape's envelope so applying it produces `flip` radians of
-        rotation on resonance. Replaces the
-        `flip * RF_org / sum(RF_org) / (2*pi*Gamma*dt)` line that's currently
-        copy-pasted six times across pulse.py and bloch_pulse_simulation.py.
+        Scale the shapes' normalized envelope to a physical RF field im mT.
+
+        Dispatches on how the shape can legitimately can calibrated:
+
+        - Amplitude-modulated (fixed phase, possibly 0/180): the requested
+          flip angle IS a rotation angle, and the amplitude follows from the
+          pulse area. See AreaCalibration.
+        
+        - Phase-modulated: a flip angle is not defined. The Hamiltonian at
+          different times do not commute, so the integral of the complex
+          waveform is not a rotation angle and cannot be inverted for an
+          amplitude. Raises rather than returning a plausible-looking wrong
+          number. The Q/sweep-rate path for adiabatic shapes arrives in a
+          later step.
         """
         envelope = self.shape.envelope()
-        scale = self.flip / np.sum(envelope) / (2 * np.pi * self.Gamma * self.shape.dt)
-        if self.shape.is_adiabatic:
-            scale *= 2
-        return envelope * scale
+
+        if np.any(envelope.imag != 0):
+            raise ValueError(
+                f"{type(self.shape).__name__} is phase-modulated, so a flip "
+                f"angle is not defined for it: the RF phase varies during the "
+                f"pulse, and the integral of a complex envelope is not a "
+                f"rotation angle.\n"
+                f"An adiabatic pulse is specified by its sweep and an "
+                f"adiabaticity factor Q, not by a flip angle. Supply the RF "
+                f"amplitude explicitly, or use the adiabatic calibration path."
+            )
+
+        cal = AreaCalibration(signed_integral_of(envelope))
+        b1_max = cal.nu1_for(self.flip, self.shape.duration) / self.Gamma
+        return envelope / np.abs(envelope).max() * b1_max
 
     def apply(self, M, df):
         """
