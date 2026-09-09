@@ -1,8 +1,2 @@
-scipy
-numpy >= 1.25
-matplotlib
-joblib
-inflect
-ipympl
-torch
-ffmpeg
+-e .[all]
+pytest

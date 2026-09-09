@@ -1,7 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import re
+
+# matplotlib and pandas are used ONLY by equ2shape(), which is an interactive
+# convenience, not library physics. They are imported inside that function so
+# that file_import -- and therefore rf_shape and `import PULSIM` -- needs only
+# numpy and scipy.
 
 def read_xy_points(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -103,6 +106,8 @@ def equ2shape(equation_str, x_range=(0, 1), num_points=1000, save_file=False, sa
         raise ValueError(f"Error evaluating expression: {e}")
 
     # Plot
+    import matplotlib.pyplot as plt
+
     plt.plot(equation_arr[0], equation_arr[1])
     plt.title(f"Plot of {equation_str}")
     plt.xlabel("x")
@@ -111,6 +116,8 @@ def equ2shape(equation_str, x_range=(0, 1), num_points=1000, save_file=False, sa
     plt.show()
 
     if save_file == True:
+        import pandas as pd
+
         print(f"Your pulse {equation_str} has been saved to: {save_path}")
         df = pd.DataFrame(equation_arr.T)
         df.to_csv(save_path)

@@ -1,7 +1,40 @@
-import torch
+"""
+mat_operator.py -- rotation and spin operators, NumPy and PyTorch flavours.
+
+PyTorch is an OPTIONAL dependency (`pip install "pulsim[torch]"`).
+This module sits at the bottom of the import graph -- bloch.py, backend.py and
+therefore every `import PULSIM` passes through here -- so a hard `import torch`
+on line 1 makes the entire package unimportable wherever torch is absent, most
+importantly in Pyodide/JupyterLite, which has no torch at all. The default
+NumPy path (cpu_rot, cpu_rot_batch, NumpyBackend) needs nothing from torch;
+only torch_rot does.
+"""
+
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+try:
+    import torch
+except ModuleNotFoundError:
+    torch = None
+    device = None
+else:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def require_torch():
+    """Entry gate for every torch-only code path.
+
+    Returns the torch module, or raises a message naming the extra to install
+    instead of the `'NoneType' object has no attribute ...` that a bare
+    `torch.<x>` would give.
+    """
+    if torch is None:
+        raise ModuleNotFoundError(
+            "This PULSIM code path requires PyTorch, an optional dependency.\n"
+            '    pip install "pulsim[torch]"\n'
+            "The default NumPy path (NumpyBackend, bloch_rotate_batch) needs no torch."
+        )
+    return torch
 
 class spin_half:
 
@@ -56,6 +89,7 @@ class torch_rot:
     """
 
     def Rx(theta):
+        require_torch()
         return torch.stack([
             torch.stack([torch.ones_like(theta), torch.zeros_like(theta), torch.zeros_like(theta)], dim=0),
             torch.stack([torch.zeros_like(theta), torch.cos(theta), -torch.sin(theta)], dim=0),
@@ -63,6 +97,7 @@ class torch_rot:
         ], dim=0).to(device)
 
     def Ry(theta):
+        require_torch()
         return torch.stack([
             torch.stack([torch.cos(theta), torch.zeros_like(theta), torch.sin(theta)], dim=0),
             torch.stack([torch.zeros_like(theta), torch.ones_like(theta), torch.zeros_like(theta)], dim=0),
@@ -70,6 +105,7 @@ class torch_rot:
         ], dim=0).to(device)
 
     def Rz(theta):
+        require_torch()
         return torch.stack([
             torch.stack([torch.cos(theta), -torch.sin(theta), torch.zeros_like(theta)], dim=0),
             torch.stack([torch.sin(theta), torch.cos(theta), torch.zeros_like(theta)], dim=0),
@@ -77,6 +113,7 @@ class torch_rot:
         ], dim=0).to(device)
 
     def Rot(theta):
+        require_torch()
         return torch.stack([
             torch.stack([torch.cos(theta), torch.sin(theta)], dim=0),
             torch.stack([-torch.sin(theta), torch.cos(theta)], dim=0)

@@ -20,7 +20,11 @@ import os
 import sys
 
 import numpy as np
-import torch
+import pytest
+
+# torch is an optional extra; this file is the only test that needs it, so it
+# skips rather than erroring the whole collection when torch is absent.
+torch = pytest.importorskip("torch", reason='needs the optional extra: pip install "pulsim[torch]"')
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

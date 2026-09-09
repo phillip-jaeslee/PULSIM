@@ -16,8 +16,6 @@ parallel case on level up: many independent whole simulations, e.g. the
 num_arrows loop in 3D_simulation_test.py, or a parameter sweep.
 """
 
-from joblib import Parallel, delayed
-
 def parallel_map(fn, paramlist, n_jobs=-1, **joblib_kwargs):
     """
     Run fn(*params) once per entry in param_list, across n_jobs processes.
@@ -29,4 +27,6 @@ def parallel_map(fn, paramlist, n_jobs=-1, **joblib_kwargs):
     n_jobs      : passed straight to joblib.Parallel (-1 = use all cores).
     returns     : list of fn(*params) results, in the same order as param_list.
     """
+    from joblib import Parallel, delayed
+
     return Parallel(n_jobs=n_jobs, **joblib_kwargs)(delayed(fn)(*params) for params in paramlist)

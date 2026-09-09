@@ -44,9 +44,8 @@ import numbers
 from abc import ABC, abstractmethod
 
 import numpy as np
-import pandas as pd
 from scipy.interpolate import CubicSpline
-from .file_import import import_file
+from PULSIM.file_import import import_file
 
 
 __all__ = ["RFShape", "AnalyticShape", "HardShape", "FileShape"]
@@ -1296,6 +1295,11 @@ class CompositeCSVShape(FileShape):
 
     @staticmethod
     def _read(path):
+        # pandas is an optional extra (`pip install "pulsim[file]"`) and this
+        # one read_csv is the only place the package uses it -- imported here
+        # so the rest of PULSIM works without it.
+        import pandas as pd
+
         df = pd.read_csv(path)
         amplitude = np.asarray(df["1"], dtype=float)
         phase = np.zeros_like(amplitude)
