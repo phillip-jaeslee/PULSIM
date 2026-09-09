@@ -26,6 +26,7 @@ import os
 import sys
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -35,6 +36,12 @@ from PULSIM.rf_shape import RFShape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WAVE_FILE = os.path.join(os.path.dirname(HERE), "wave", "sine.jhl")
+
+pytestmark = pytest.mark.skipif(
+    not os.path.exists(WAVE_FILE),
+    reason="requires wave/sine.jhl, not distributed with the repository "
+           "(.gitignore excludes wave/ -- see audit item 0-1)",
+)
 
 GAMMA = 42.58
 

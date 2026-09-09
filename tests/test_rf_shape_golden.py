@@ -130,6 +130,13 @@ def test_file_shape_matches_legacy(golden, params, key):
     t_max, _ = params
     filename = str(golden[f"filename/file_{key}"])
     wave = os.path.join(os.path.dirname(HERE), "wave", filename)
+    if not os.path.exists(wave):
+        pytest.skip(
+            f"wave/{filename} is not distributed with the repository "
+            f"(.gitignore excludes wave/ -- see audit item 0-1). "
+            f"This test runs only where the waveform library is present."
+        )
+
     expected = golden[f"shape/file_{key}"]
     shape = FileShape(path=wave, duration=t_max)
 
