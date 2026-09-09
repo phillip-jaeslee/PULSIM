@@ -18,10 +18,11 @@ effective field
 **B**(t) = ( B1x(t), B1y(t), Δf/γ )
 
 where (B1x, B1y) is the applied RF field — the real and imaginary parts of
-the complex envelope RF(t) = B1x(t) + i·B1y(t) — and Δf/γ is the resonance
-offset expressed as an equivalent static field (γ = gyromagnetic ratio,
-`Gamma` in the code). The magnetization precesses about **B**(t) at the
-instantaneous Larmor rate 2πγ|**B**(t)|.
+the complex envelope RF(t) = B1x(t) + i·B1y(t) — and Δf/γ̄ is the resonance
+offset expressed as an equivalent static field (γ̄ = γ/2π, the reduced
+gyromagnetic ratio in kHz/mT — `Gamma` in the code; see
+docs/PHYSICS_SPECIFICATION.md §1.3). The magnetization precesses about
+**B**(t) at the instantaneous Larmor rate 2πγ̄|**B**(t)|.
 
 ## 2. Rotating a vector about an arbitrary axis, using only Rx, Ry, Rz
 

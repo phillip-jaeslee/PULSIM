@@ -28,7 +28,13 @@ GYRO_RATIOS = {
 
 
 def gyro_ratio(nucleus):
-    """Gyromagnetic ratio (kHz/mT) for a supported nucleus label."""
+    """Reduced gyromagnetic ratio gamma_bar = gamma/(2*pi), in kHz/mT.
+
+    NOT gamma itself (rad/s/T). PHYSICS_SPECIFICATION.md section 1.3 requires
+    that the two never share a name: gamma_bar is cyclic frequency per field,
+    gamma is angular frequency per field. Values are signed -- see 15N, 17O --
+    and the sign must not be removed.
+    """
     try:
         return GYRO_RATIOS[nucleus]
     except KeyError:
@@ -44,7 +50,9 @@ class SpinSystem:
                 also doubles as each spin's RF-channel identity -- spins
                 sharing a nucleus get irradiated together by a pulse
                 calibrated for that nucleus's gamma.
-    offsets   : list of offset frequencies (rad/s), one per spin.
+    offsets   : list of offset frequencies (rad/ms), one per spin.
+                PULSIM's time base is ms, os an offset of f kHz is supplied
+                as 2*pif -- see tests/test_louville.py.
     couplings : dict mapping (i, j) spin-index pairs -> J coupling (Hz).
                 Converted internally from Hz to PULSIM's ms time base by
                 Delay/ShapePulseSegment.
