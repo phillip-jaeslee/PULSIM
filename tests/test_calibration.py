@@ -214,3 +214,42 @@ def test_hypsec_truncation_sets_the_edge_amplitude(truncation_percent):
 
     assert target <= amp[0] < target * 1.01
     assert target <= amp[-1] < target * 1.01
+
+def _hypsec_pulse(duration=2.0, points=2000, q_mid=5.0):
+    shape = PULSIM.RFShape.create("hypsec", duration=duration, points=points, q_mid=q_mid)
+    return PULSIM.Pulse(shape, backend=PULSIM.NumpyBackend(Gamma=GAMMA))
+
+def test_adiabatic_inversion_tolerates_b1_error_above_a_threshold():
+    """Lession L4, as an assertion.
+
+    An adiabatic pulse inverts over a wide range of B1 -- and stops when Q
+    falls too low. Bounds are deliberately loose: the claim is the behavior,
+    not the digits.
+    """
+    pulse = _hypsec_pulse()
+    sweep = 10.0            # kHz, at T = 2 ms
+    offsets = np.linspace(-0.35 * sweep, 0.35 * sweep, 41)
+
+    good = PULSIM.inversion_fidelity(pulse, offsets, b1_scales=(0.8, 1.0, 1.5, 2.0))
+    assert good.min() > 0.99, "inversion should survive 0.8 to 2x nominal B1"
+
+    poor = PULSIM.inversion_fidelity(pulse, offsets, b1_scales=(0.5,))
+    assert poor.min() < 0.95, "at half nominal B1 the adiabatic condition fails"
+
+def test_q_scales_as_the_square_of_b1():
+    pulse = _hypsec_pulse(q_mid=5.0)
+    q = PULSIM.realized_q(pulse, b1_scales=(0.5, 1.0, 2.0))
+    assert q == pytest.approx([1.25, 5.0, 20.0], rel=1e-9)
+
+def test_q_is_undefined_for_an_area_calibrated_pulse():
+    shape = PULSIM.RFShape.create("gausscasq5", duration=2.0, points=1000)
+    pulse = PULSIM.Pulse(shape, flip=np.pi / 2, backend=PULSIM.NumpyBackend(Gamma=GAMMA))
+    with pytest.raises(ValueError, match="only defined for an adiabatic"):
+        PULSIM.realized_q(pulse)
+
+def test_fraction_above_summarizes_a_map():
+    pulse = _hypsec_pulse()
+    offsets = np.linspace(-3.5, 3.5, 21)
+    f = PULSIM.inversion_fidelity(pulse, offsets, b1_scales=(0.8, 1.0, 1.2))
+    assert PULSIM.fraction_above(f, 0.99) == 1.0
+    assert PULSIM.fraction_above(f, 1.01) == 0.0
