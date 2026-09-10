@@ -84,19 +84,42 @@ class Pulse:
         envelope = self.shape.envelope()
         return envelope / np.abs(envelope).max() * self.b1_max
 
-    def apply(self, M, df):
+    def _field(self, rf_n, df):
+        """The (n_offsets, 3) [Bx, By, Bz] field seen during one RF step."""
+        return np.stack([
+            np.full_like(df, np.real(rf_n)),
+            np.full_like(df, np.imag(rf_n)),
+            df / self.Gamma,
+        ], axis=1)
+
+    def apply(self, M, df, trajectory=False):
         """
-        M  : (3, n_offsets) starting magnetization
-        df : (n_offsets,) off-resonance frequencies, kHz
-        returns the (3, n_offsets) magnetization after the full pulse
+        M   : (3, n_offsets) starting magnetization
+        df  : (n_offsets,) off-resonance frequencies, kHz
+
+        trajectory=False (the default) returns the (3, n_offsets)
+        magnetization after the full pulse
+
+        trajectory=True returns the whole history instead, as an
+        (n_steps + 1, 3, n_offsets) array: traj[0] is M exactly as handed in,
+        traj[n] is M after the n-th RF step, and traj[-1] is precisely what
+        the trajectory=False call would have returned. Every frame is a
+        drop-in (3, n_offsets) M, which is what an animation walks through.
+        apply() is the only place that knows how many steps a pulse takes,
+        so it is the only place that can record them.
         """
         RF = self.calibrated_rf()
         dt = self.shape.dt
+
+        if not trajectory:
+            for n in range(len(RF)):
+                M = self.backend.rotate(M, dt, self._field(RF[n], df), self.axis)
+            return M
+
+        M = np.asarray(M, dtype=float)
+        traj = np.empty((len(RF) + 1,) + M.shape, dtype=float)
+        traj[0] = M
         for n in range(len(RF)):
-            B = np.stack([
-                np.full_like(df, np.real(RF[n])),
-                np.full_like(df, np.imag(RF[n])),
-                df / self.Gamma,
-            ], axis=1)
-            M = self.backend.rotate(M, dt, B, self.axis)
-        return M
+            M = self.backend.rotate(M, dt, self._field(RF[n], df), self.axis)
+            traj[n + 1] = M
+        return traj
