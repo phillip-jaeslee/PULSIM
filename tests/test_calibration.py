@@ -198,11 +198,19 @@ def test_hypsec_waveform_realizes_its_declared_sweep_width(sweep_width_1s):
 
 @pytest.mark.parametrize("truncation_percent", [0.5, 1.0, 5.0])
 def test_hypsec_truncation_sets_the_edge_amplitude(truncation_percent):
-    """beta = arccosh(1/truncation), so the envelope must start and end at
-    exactly the truncation level.
+    """beta = arccosh(1/truncation), so the envelope starts and ends just above
+    the truncation level.
+
+    Not *exactly* at it: _build searches a 10,000-point grid for the first
+    sample exceeding the threshold, so the edge value is quantized by that grid
+    (~3e-3 relative here). A tighter bound is machine-dependent -- a last-bit
+    difference in cosh(beta*t)**(-1-1j*mu) moves the boundary by one index
+    between numpy versions, which is how CI caught this.
     """
-    shape = PULSIM.RFShape.create("hypsec", duration=0.6, points=1000, truncation_percent=truncation_percent)
+    shape = PULSIM.RFShape.create("hypsec", duration=0.6, points=1000,
+                                  truncation_percent=truncation_percent)
     amp = np.abs(shape.envelope())
     target = truncation_percent / 100.0
-    assert amp[0] == pytest.approx(target, rel=1e-3)
-    assert amp[-1] == pytest.approx(target, rel=1e-3)
+
+    assert target <= amp[0] < target * 1.01
+    assert target <= amp[-1] < target * 1.01
