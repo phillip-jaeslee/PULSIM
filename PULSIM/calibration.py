@@ -1,12 +1,12 @@
 """
 calibration.py -- how a normalized waveform becomes a physical RF amplitude.
 
-A shape is a dimesionless envelope. Turning it into a field in mT requires a
+A shape is a dimensionless envelope. Turning it into a field in mT requires a
 calibration strategy, and different kinds of pulse use different ones. This
 module holds those strategies; the propagation engine is identical for all of 
 them (see docs/PHYSICS_SPECIFICATION.md section 1)
 
-Units follow the sepcification: nu1 in kHz, B1 in mT, duration in ms,
+Units follow the specification: nu1 in kHz, B1 in mT, duration in ms,
 Gamma = gamma / (2 * pi) in kHz/mT, flip angles in rad
 """
 
@@ -95,4 +95,14 @@ class AdiabaticCalibration:
     def nu1_over_sqrt_q(self, duration_ms):
         """Bruker integradia's Q-independent output."""
         return self.half_width * self.beta / (np.pi * duration_ms)
+
+    def q_for(self, nu1_max, duration_ms):
+        """The adiabaticity actually achieved at a given RF amplitude.
+
+        Inverse of nu1_for. Diagnostic only -- never an input to propagation.
+        Meaningful when the caller supplies nu1_max explicitly, where the
+        realised Q may differ from the design q_mid.
+        """
+        root = nu1_max * np.pi * duration_ms / (self.half_width * self.beta)
+        return float(root * root / self.mu)
     

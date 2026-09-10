@@ -50,7 +50,7 @@ import warnings
 
 from scipy.interpolate import CubicSpline
 from PULSIM.file_import import import_file
-from PULSIM.calibration import beta_from_truncation, mu_from_sweep_width
+from PULSIM.calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, signed_integral_of
 
 
 __all__ = ["RFShape", "AnalyticShape", "HardShape", "FileShape"]
@@ -217,6 +217,26 @@ class RFShape(ABC):
         """"area" (flip angle -> signed pulse area) or "adiabatic"
         (sweep rate + Q). Derived from intent so there is one source of truth."""
         return "adiabatic" if self.intent == "adiabatic" else "area"        
+
+    @property
+    def calibration(self):
+        """The strategy that turns this normalized envelope into a field in mT.
+
+        Amplitude-modulated shapes calibrate from the signed pulse area. A
+        shape that declares intent='adiabatic' must override this with a
+        strategy carrying its own design parameters -- there is no generic
+        adiabatic calibration, because the on-resonance sweep rate depends on
+        the family (HypSec, WURST, tanh/tan, the constant-adiabaticity shapes
+        each need their own expression).
+        """
+        if self.calibration_mode == "adiabatic":
+            raise NotImplementedError(
+                f"{type(self).__name__} declares intent='adiabatic' but has no "
+                f"adiabatic calibration implemented. The HypSec sweep-rate "
+                f"expression does not transfer to other adiabatic families. "
+                f"Supply the RF amplitude explicitly (nu1_max) until one exists."
+            )
+        return AreaCalibration(signed_integral_of(self.envelope()))        
 
     @property
     def is_adiabatic(self) -> bool:
@@ -845,8 +865,11 @@ class HyperbolicSecant(AnalyticShape):
 
     #: Bruker HypSec design defaults, matching a real vendor file:
     #: SHL_SW = 20 Hz (sweep width quoted for a 1s pulse), SHL_TRUNCLEV = 1%.
+    #: Bruker's rule of thumb: Q = 5 for inversion pulses, 2-3 for decoupling.
+
     default_sweep_width_1s = 20.0
     default_truncation_percent = 1.0
+    default_q_mid = 5.0
 
     def _design(self):
         """ (beta, mu) fro this shape
@@ -868,7 +891,25 @@ class HyperbolicSecant(AnalyticShape):
     @property
     def mu(self):
         return self._design()[1]
-    
+
+    @property
+    def q_mid(self):
+        return float(self.params.get("q_mid", self.default_q_mid))
+
+    @property
+    def calibration(self):
+        """FULL PASSAGE ONLY.
+
+        The sweep rate below is evaluated at the resonance crossing at the
+        centre of the sweep. A half passage crosses resonance at the edge of
+        its sweep, so the prefactor differs and has not been derived or
+        verified. This class has no passage parameter yet; when one is added,
+        this property must reject or correct the half-passage case rather than
+        returning a number.
+        """        
+        beta, mu = self._design()
+        return AdiabaticCalibration(q_mid=self.q_mid, mu=mu, beta=beta, half_width=1.0, convention="bruker_hs_full")
+
     def _build(self):
         truncate = float(self.params.get("truncation_percent", self.default_truncation_percent))
         beta, mu = self._design()

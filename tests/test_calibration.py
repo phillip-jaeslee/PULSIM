@@ -125,13 +125,39 @@ def phase_modulated_shapes():
             names.append(name)
     return names
 
-@pytest.mark.parametrize("name", phase_modulated_shapes())
-def test_flip_angle_ist_rejected_for_phase_modulated_shapes(name):
-    """A flip angle is not defined when the RF phase varies during the pulse.
-    PULSIM must refuse rather than return a plausible-looking wrong number."""
+def adiabatic_without_calibration():
+    """Every adiabatic shape except the one whose sweep rate we have derived."""
+    return [n for n in phase_modulated_shapes() if n != "hypsec"]
+
+@pytest.mark.parametrize("name", adiabatic_without_calibration())
+def test_adiabatic_families_without_a_sweep_rate_refuse(name):
+    """Ten of the eleven have no derived sweep-rate expression. They must say
+    so rather than silently falling back to area calibration."""
     shape = PULSIM.RFShape.create(name, duration=DURATION, points=POINTS)
-    with pytest.raises(ValueError, match="phase-modulated"):
-        PULSIM.Pulse(shape, flip=np.pi / 2, axis="x", backend=PULSIM.NumpyBackend(Gamma=GAMMA)).calibrated_rf()
+    with pytest.raises(NotImplementedError, match="adiabatic calibration"):
+        PULSIM.Pulse(shape, backend=PULSIM.NumpyBackend(Gamma=GAMMA)).nu1_max
+
+def test_hypsec_calibrates_without_a_flip_angle():
+    """The point of the whole redesign: no flip angle, and it still works."""
+    shape = PULSIM.RFShape.create("hypsec", duration=2.0, points=1000)
+    pulse = PULSIM.Pulse(shape, backend=PULSIM.NumpyBackend(Gamma=GAMMA))
+    assert pulse.nu1_max == pytest.approx(4.5914306592, rel=1e-9)
+    assert pulse.realized_q == pytest.approx(5.0, rel=1e-9)
+
+def test_flip_angle_on_adiabatic_shape_warns_and_changes_nothing():
+    shape = PULSIM.RFShape.create("hypsec", duration=2.0, points=1000)
+    backend = PULSIM.NumpyBackend(Gamma=GAMMA)
+    with pytest.warns(UserWarning, match="does not scale the RF amplitude"):
+        with_flip = PULSIM.Pulse(shape, flip=np.pi / 2, backend=backend).nu1_max
+    assert with_flip == PULSIM.Pulse(shape, backend=backend).nu1_max
+
+def test_explicit_nu1_max_wins_and_realized_q_reports_it():
+    """Precedence: explicit amplitude beats the design Q, and the achieved Q
+    is recomputed as a diagnostic rather than silently assumed."""
+    shape = PULSIM.RFShape.create("hypsec", duration=2.0, points=1000)
+    pulse = PULSIM.Pulse(shape, nu1_max=2.0, backend=PULSIM.NumpyBackend(Gamma=GAMMA))
+    assert pulse.nu1_max == 2.0
+    assert pulse.realized_q == pytest.approx(0.9487109995, rel=1e-6)
 
 def test_no_empirical_factor_of_two():
     """The historical 'x2 if is_adiabatic' had no derivation. Guard against it
