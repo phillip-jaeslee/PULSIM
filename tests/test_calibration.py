@@ -141,3 +141,42 @@ def test_no_empirical_factor_of_two():
     expected = AreaCalibration(signed_integral_of(shape.envelope())).nu1_for(np.pi / 2, DURATION) / GAMMA
     assert np.abs(pulse.calibrated_rf()).max() == pytest.approx(expected, rel=1e-12)
 
+def _sweep_times_duration(shape, duration):
+    """The sweep width the stored phase actually realises, times duration.
+
+    nu_RF(t) = (1/(2*pi*T)) * dphi/du with u = t/T, so this product is the
+    duration-invariant "sweep width for a 1 second pulse" -- Bruker's SHL_SW.
+    """
+    phase = np.unwrap(np.angle(shape.envelope()))
+    u = np.linspace(0.0, 1.0, shape.points)
+    nu = np.gradient(phase, u) / (2.0 * np.pi * duration)
+    return (nu.max() - nu.min()) * duration
+
+def test_hypsec_reproduces_the_bruker_design_constants():
+    """beta and mu are consequences of truncation and sweep width, not free
+    parameters. Replaces the legacy-equivalence fixture for hypsec.
+    """
+    shape = PULSIM.RFShape.create("hypsec", duration=0.6, points=1000)
+    assert shape.beta == pytest.approx(BRUKER_BETA, abs=1e-6)
+    assert shape.mu == pytest.approx(BRUKER_MU, abs=1e-6)
+
+@pytest.mark.parametrize("sweep_width_1s", [10.0, 20.0, 40.0])
+def test_hypsec_waveform_realizes_its_declared_sweep_width(sweep_width_1s):
+    """The design input must actaully reach the waveform.
+
+    The old code advertised a 'sweepwidth' parameter in its docstring and never
+    read it: passing sweepwidth=99999 produced a byte-identical envelop.
+    """
+    shape = PULSIM.RFShape.create("hypsec", duration=0.6, points=1000, sweep_width_1s=sweep_width_1s)
+    assert _sweep_times_duration(shape, 0.6) == pytest.approx(sweep_width_1s, rel=1e-3)
+
+@pytest.mark.parametrize("truncation_percent", [0.5, 1.0, 5.0])
+def test_hypsec_truncation_sets_the_edge_amplitude(truncation_percent):
+    """beta = arccosh(1/truncation), so the envelope must start and end at
+    exactly the truncation level.
+    """
+    shape = PULSIM.RFShape.create("hypsec", duration=0.6, points=1000, truncation_percent=truncation_percent)
+    amp = np.abs(shape.envelope())
+    target = truncation_percent / 100.0
+    assert amp[0] == pytest.approx(target, rel=1e-3)
+    assert amp[-1] == pytest.approx(target, rel=1e-3)

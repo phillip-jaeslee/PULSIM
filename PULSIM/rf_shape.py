@@ -50,6 +50,7 @@ import warnings
 
 from scipy.interpolate import CubicSpline
 from PULSIM.file_import import import_file
+from PULSIM.calibration import beta_from_truncation, mu_from_sweep_width
 
 
 __all__ = ["RFShape", "AnalyticShape", "HardShape", "FileShape"]
@@ -841,10 +842,36 @@ class HyperbolicSecant(AnalyticShape):
     Extra params: truncate, beta, mu, low_to_high.
     """
     default_duration = 4.0  # matches HYPSEC_pulse's own default
+
+    #: Bruker HypSec design defaults, matching a real vendor file:
+    #: SHL_SW = 20 Hz (sweep width quoted for a 1s pulse), SHL_TRUNCLEV = 1%.
+    default_sweep_width_1s = 20.0
+    default_truncation_percent = 1.0
+
+    def _design(self):
+        """ (beta, mu) fro this shape
+
+        beta    = arccosh(1 / truncation)
+        mu      = pi * SW_1s / (2 * beta)
+
+        """
+        truncation = float(self.params.get("truncation_percent", self.default_truncation_percent))
+        sweep_width_1s = float(self.params.get("sweep_width_1s", self.default_sweep_width_1s))
+        beta = float(self.params.get("beta", beta_from_truncation(truncation)))
+        mu = float(self.params.get("mu", mu_from_sweep_width(sweep_width_1s, beta)))
+        return beta, mu
+
+    @property
+    def beta(self):
+        return self._design()[0]
+
+    @property
+    def mu(self):
+        return self._design()[1]
+    
     def _build(self):
-        truncate = self.params.get('truncate', 1)
-        beta = self.params.get('beta', 5.29829)
-        mu = self.params.get('mu', 5.92944)
+        truncate = float(self.params.get("truncation_percent", self.default_truncation_percent))
+        beta, mu = self._design()
         low_to_high = self.params.get('low_to_high', True)
 
         t_original = np.linspace(-3, 3, 10_000)

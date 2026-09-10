@@ -55,7 +55,7 @@ ANALYTIC_NAMES = [
     "gausscasG3", "gausscasG4", "gausscasQ3", "gausscasQ5",
     "hermite", "seduce1", "sneeze", "qsneeze",
     "esnob", "i2snob", "i3snob", "rsnob", "dsnob",
-    "hypsec", "swrl11", "swrl12", "swrl17",
+    "swrl11", "swrl12", "swrl17",
 ]
 
 
