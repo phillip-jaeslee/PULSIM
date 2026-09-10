@@ -15,7 +15,7 @@ import numpy as np
 # torch is an optional extra (`pip install "pulsim[torch]"`); TorchBackend
 # imports it lazily in __init__ so that importing this module -- and hence
 # `import PULSIM` -- works in a torch-free environment such as JupyterLite.
-from PULSIM.bloch import bloch_rotate, torch_bloch_rotate, bloch_rotate_batch
+from .bloch import bloch_rotate, torch_bloch_rotate, bloch_rotate_batch
 
 class Backend(ABC):
     """Declares what every backend must be able to do. Never instantiated directly."""
@@ -43,7 +43,7 @@ class TorchBackend(Backend):
     into the shape it expects and back out again."""
 
     def __init__(self, Gamma, device=None):
-        from PULSIM.mat_operator import require_torch
+        from .mat_operator import require_torch
         torch = require_torch()
 
         self._torch = torch

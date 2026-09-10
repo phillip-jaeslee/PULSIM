@@ -4,7 +4,7 @@ import numpy as np
 # backend.py and by PULSIM/__init__.py, so a top-level `import torch` would
 # make the whole package require torch. Only torch_bloch_rotate needs it, and
 # it imports it lazily at call time (see below).
-from PULSIM.mat_operator import cpu_rot, cpu_rot_batch
+from .mat_operator import cpu_rot, cpu_rot_batch
 
 ## Bloch relaxation
 # calculation of Bloch equation for time T
@@ -125,7 +125,7 @@ M_final : final magnetization
 """
 
 def torch_bloch_rotate(M_init, T, B, angle, Gamma):
-    from PULSIM.mat_operator import require_torch, torch_rot
+    from .mat_operator import require_torch, torch_rot
     torch = require_torch()
 
     flip = 2 * torch.pi * Gamma * torch.norm(B, dim=1) * T

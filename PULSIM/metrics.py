@@ -13,7 +13,7 @@ never promised. Excitation and refocusing need a different meausre.
 
 import numpy as np
 
-from PULSIM.pulse_oo import Pulse
+from .pulse_oo import Pulse
 
 def inversion_fidelity(pulse, offsets, b1_scales=(1.0,)):
     """F(offset, B1 scale) = (1 - Mz_final) / 2, starting from M0 = +z.

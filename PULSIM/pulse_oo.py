@@ -9,7 +9,7 @@ requires (see calibration.py), then steps a magnetization through it.
 import numpy as np
 import warnings
 
-from PULSIM.backend import NumpyBackend
+from .backend import NumpyBackend
 
 class Pulse:
     """A single RF pulse: a shape, a target flip angle, and a rotation axis."""

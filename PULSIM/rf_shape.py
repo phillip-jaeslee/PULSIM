@@ -49,8 +49,8 @@ import numpy as np
 import warnings
 
 from scipy.interpolate import CubicSpline
-from PULSIM.file_import import import_file
-from PULSIM.calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, signed_integral_of
+from .file_import import import_file
+from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, signed_integral_of
 
 
 __all__ = ["RFShape", "AnalyticShape", "HardShape", "FileShape"]
