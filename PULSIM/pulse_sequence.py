@@ -28,34 +28,11 @@ class PulseSequence:
     def __getitem__(self, i):
         return self.pulses[i]
 
-    def run(self, M, df, trajectory=False):
-        """Apply every pulse in order. 
-        
-        trajectory=False (the default) returns the final (3, n_offsets) M.
-
-        trajectory=True returns the whole sequence's history as one
-        (n_steps_total + 1, 3, n_offsets) array, n_steps_total being the sum
-        of every pulse's point count. Each pulse's own trajectory opens with
-        the M it was handed, so those duplicated boundary frames are dropped
-        as the pieces are joined: the result carries exactly one frame per RF
-        step of the sequence, plus the single starting frame -- the same
-        concatenation this class already does for .rf, .phase and .time,
-        now done for the magnetization too.
-        """
-        if not trajectory:
-            for pulse in self.pulses:
-                M = pulse.apply(M, df)
-            return M
-
-        if not self.pulses:
-            return np.asarray(M, dtype=float)[None, ...]
-
-        pieces = []
-        for i, pulse in enumerate(self.pulses):
-            traj = pulse.apply(M, df, trajectory=True)
-            pieces.append(traj if i == 0 else traj[1:])
-            M = traj[-1]
-        return np.concatenate(pieces, axis=0)
+    def run(self, M, df):
+        """Apply every pulse in order. Returns the final (3, n_offsets) M."""
+        for pulse in self.pulses:
+            M = pulse.apply(M, df)
+        return M
 
     @property
     def rf(self):
