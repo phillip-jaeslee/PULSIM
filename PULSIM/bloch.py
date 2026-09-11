@@ -6,29 +6,122 @@ import numpy as np
 # it imports it lazily at call time (see below).
 from .mat_operator import cpu_rot, cpu_rot_batch
 
-## Bloch relaxation
-# calculation of Bloch equation for time T
-"""
-Parameters
-M_init  : initial magentization
-T       : duraion [ms]
-M0      : equilibrium magnetization (defualt = 1)
-T1      : logitudianl relaxation time [ms]
-T2      : transverse relaxation time [ms]
-A_relax : relaxation array
-M_final : final magnetization
-"""
+def _decay(T, tau):
+    """exp(-T/tau), with tau=None meaning infinite -- i.e. no decay.
 
-def bloch_relax(M_init, T, M0, T1, T2):
-    A_relax = np.array([[np.exp(-T/T2), 0, 0],
-                    [0, np.exp(-T/T2), 0],
-                    [0, 0, np.exp(-T/T1)]])
-    brecover = np.array([0, 0, M0*(1-np.exp(-T/T1))])
+    A relaxation time of None means "this component does not relax".
+    Zero is an erro, not shorthand for instantaneous.
+    """
+    if tau is None or tau == np.inf:
+        return 1.0
+    if tau <= 0:
+        raise ValueError(f"relaxation time must be positive, or None for infinite; got {tau}")
+
+    return float(np.exp(-T/tau))
+
+def relaxation_matrix(T1=None, T2=None):
+    """R = diag(1/T2, 1/T2, 1/T1) in ms^-1. None -> a rate of zero."""
+    for name, tau in (("T1", T1), ("T2", T2)):
+        if tau is not None and tau != np.inf and tau <= 0:
+            raise ValueError(f"{name} must be positive, or None for infinite; got {tau}")
+
+    r2 = 0.0 if (T2 is None or T2 == np.inf) else 1.0 / T2
+    r1 = 0.0 if (T1 is None or T1 == np.inf) else 1.0 / T1
+
+    return np.diag([r2, r2, r1])
+
+def bloch_relax(M_init, T, M0=1.0, T1=None, T2=None):
+    """Free relaxation over a duration T, with no applied field.
+
+    Closed form of PHYSICS_SPECIFICATION.md section 1.8 item 5:
+
+        Mx(t) = Mx(0) exp(-t/T2)
+        My(t) = My(0) exp(-t/T2)
+        Mz(t) = M0 + [Mz(0) - M0] exp(-t/T1)
+
+    Accepts a single (3,) vector or a (3, n) batch: the decay factors are
+    scalars, so the same expression covers both.
+
+    T, T1, T2 : ms. None means infinite.
+    """
+    M = np.asarray(M_init, dtype=float)
+    e2 = _decay(T, T2)
+    e1 = _decay(T, T1)
+
+    out = np.empty_like(M)
+    out[0] = e2 * M[0]
+    out[1] = e2 * M[1]
+    out[2] = e1 * M[2] + M0 * (1.0 - e1)
+    return out
+
+def affine_propagate(M_init, dt, Omega, T1=None, T2=None, M0=1.0):
+    """EXACT propagation over one constant-field step. Reference implementation.
+
+    Correct but not fast -- a 4x4 matrix exponential per call. The production
+    path uses Strang splitting; a convergence test asserts the two agree.
+
+    The spec's equation (section 1.7)
+
+        dM/dt = Omega x M - R (M - M_eq)
     
+    is linear inhomogeneous, dM/dt = L M + c, with
 
-    M_final = A_relax * M_init + brecover
+        L = Omega_hat - R   Omega_hat M = Omega x M
+        c = R M_eq          M_eq = (0, 0, M0)
+    
+    so the exaact solution over dt is affine: M -> A M + b. Both come from one
+    4x4 exponential, which avoids inverting L -- and L is singular in exactly
+    the case that matters most, T1 = T2 = None:
 
-    return M_final
+        G = [[L, c],        expm(G dt) = [[A, b],
+             [0, 0]]                      [0, 1]]
+    
+    Omega   : (3,) angular frequency vector, rad/ms (Omega = 2*pi*gamma_bar*B)
+    dt      : ms
+    """
+    from scipy.linalg import expm
+
+    wx, wy, wz = np.asarray(Omega, dtype=float)
+
+    # Omega x M, written directly from the compnent equations in section 1.7
+    Omega_hat = np.array([[0.0, -wz, wy],
+                          [wz, 0.0, -wx],
+                          [-wy, wx, 0.0]])
+
+    R = relaxation_matrix(T1, T2)
+    L = Omega_hat - R
+    c = R @ np.array([0.0, 0.0, M0])
+
+    G = np.zeros((4, 4))
+    G[:3, :3] = L
+    G[:3, 3] = c
+
+    E = expm(G * dt)
+
+    return E[:3, :3] @ np.asarray(M_init, dtype=float) + E[:3, 3]
+
+def bloch_relax_rotate_batch(M_init, dt, B, angle, Gamma, T1=None, T2=None, M0=1.0):
+    """One time step with rotation and relaxation, Strang-split
+
+        relax(dt/2) -> rotate(dt) -> relax(dt/2)
+    
+    Second-order accurate in dt. Rotation and relaxation do not commute unless
+    T1 == T2, so a single step is not exact; affine_propagate is the exact
+    reference, and tests/test_relaxation.py asserts convergence to it.
+
+    Relaxation is the cheap half (closed form, no matrix), so it is the part
+    that gets done twice.
+
+    With T1 = T2 = None this returns bloch_rotate_batch's result BIT FOR BIT,
+    not approximately -- the early return guarantees it rather than relying on
+    the identity relaxation being exactly 1.0.
+    """
+    if T1 is None and T2 is None:
+        return bloch_rotate_batch(M_init, dt, B, angle, Gamma)
+
+    M = bloch_relax(M_init, 0.5 * dt, M0, T1, T2)
+    M = bloch_rotate_batch(M, dt, B, angle, Gamma)
+    return bloch_relax(M, 0.5 * dt, M0, T1, T2)
 
 ## Bloch relaxation in batch
 # calculation of Bloch equation on a batch of timepoints

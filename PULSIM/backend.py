@@ -15,7 +15,7 @@ import numpy as np
 # torch is an optional extra (`pip install "pulsim[torch]"`); TorchBackend
 # imports it lazily in __init__ so that importing this module -- and hence
 # `import PULSIM` -- works in a torch-free environment such as JupyterLite.
-from .bloch import bloch_rotate, torch_bloch_rotate, bloch_rotate_batch
+from .bloch import bloch_rotate, torch_bloch_rotate, bloch_rotate_batch, bloch_relax_rotate_batch
 
 class Backend(ABC):
     """Declares what every backend must be able to do. Never instantiated directly."""
@@ -31,18 +31,33 @@ class Backend(ABC):
 class NumpyBackend(Backend):
     """The numpy implementation: one bloch_rotate call per offset, in a loop."""
 
-    def __init__(self, Gamma):
+    def __init__(self, Gamma, T1=None, T2=None, M0=1.0):
         self.Gamma = Gamma
+        self.T1 = T1
+        self.T2 = T2
+        self.M0 = M0
 
     def rotate(self, M, dt, B, axis="x"):
-        return bloch_rotate_batch(M, dt, B, axis, self.Gamma)
+        return bloch_relax_rotate_batch(M, dt, B, axis, self.Gamma, self.T1, self.T2, self.M0)
 
 class TorchBackend(Backend):
     """The torch implementation. torch_bloch_rotate already handles every
     offset in one call, so there's no loop here — just getting the arrays
-    into the shape it expects and back out again."""
+    into the shape it expects and back out again.
+    
+    Rotation only: relaxation is not implemented, and asking for it raises
+    rather than being quietly dropped.
+    """
 
-    def __init__(self, Gamma, device=None):
+    def __init__(self, Gamma, device=None, T1=None, T2=None, M0=1.0):
+        if T1 is not None or T2 is not None:
+            raise NotImplementedError(
+                "TorchBackend does not implement relaxation. torch_bloch_rotate is a "
+                "pure rotation, so T1/T2 passed here would be silently discarded and "
+                "the result would be wrong rather than slow. Use NumpyBackend for "
+                "relaxation, or leave T1=T2=None."
+            )
+
         from .mat_operator import require_torch
         torch = require_torch()
 

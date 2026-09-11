@@ -29,8 +29,11 @@ Imports: `mat_operator.torch_rot, cpu_rot`
 | `bloch_rotate(M_init,T,B,angle)` | `cpu_rot.Rx/Ry/Rz` |
 | `torch_bloch_rotate(M_init,T,B,angle,Gamma)` | `torch_rot.Rx/Ry/Rz` (batched `torch.bmm`) |
 | `bloch_relax`, `bloch_relax_batch` | — |
+| `relaxation_matrix`, `_decay` | — |
+| `affine_propagate` | `scipy.linalg.expm` (exact reference propagator) |
+| `bloch_relax_rotate_batch` | → `bloch_relax`, `bloch_rotate_batch` (Strang split) |
 | `bloch_rftip` | → `bloch_rotate` |
-| `bloch_simulation` | → `bloch_rotate`, `bloch_relax` |
+| `bloch_simulation` | → `bloch_rotate`, `bloch_relax` (**broken; removed in B2b**) |
 | `spoil_magnetization` | — |
 
 ### `pulse_shape_list.py` — 25 analytic pulse-shape generators
