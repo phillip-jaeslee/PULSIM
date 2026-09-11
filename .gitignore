@@ -15,3 +15,4 @@ docs/
 .pytest_cache/
 build/
 dist/
+temp_test.py
