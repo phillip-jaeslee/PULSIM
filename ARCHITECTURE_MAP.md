@@ -26,15 +26,25 @@ Imports: `mat_operator.torch_rot, cpu_rot`
 
 | Function | Calls |
 |---|---|
-| `bloch_rotate(M_init,T,B,angle)` | `cpu_rot.Rx/Ry/Rz` |
+| `bloch_rotate(M_init,T,B,angle,Gamma)` | `cpu_rot.Rx/Ry/Rz` |
+| `bloch_rotate_batch(M_init,T,B,angle,Gamma)` | `cpu_rot_batch` + `np.einsum` |
 | `torch_bloch_rotate(M_init,T,B,angle,Gamma)` | `torch_rot.Rx/Ry/Rz` (batched `torch.bmm`) |
-| `bloch_relax`, `bloch_relax_batch` | — |
-| `relaxation_matrix`, `_decay` | — |
-| `affine_propagate` | `scipy.linalg.expm` (exact reference propagator) |
-| `bloch_relax_rotate_batch` | → `bloch_relax`, `bloch_rotate_batch` (Strang split) |
-| `bloch_rftip` | → `bloch_rotate` |
-| `bloch_simulation` | → `bloch_rotate`, `bloch_relax` (**broken; removed in B2b**) |
-| `spoil_magnetization` | — |
+| `_decay`, `relaxation_matrix` | — |
+| `bloch_relax` | — closed-form free relaxation, single vector or batch |
+| `bloch_relax_batch` | — relaxation trajectory for one vector at many times |
+| `affine_propagate` | `scipy.linalg.expm` — exact constant-field reference propagator |
+| `bloch_relax_rotate_batch` | → `bloch_relax`, `bloch_rotate_batch` (Strang split; production path) |
+| `bloch_delay` | → `bloch_relax_rotate_batch` with a purely longitudinal field |
+
+### `gradients.py` — gradients as position-dependent offsets
+Imports: `numpy` only
+
+| Function | Notes |
+|---|---|
+| `gradient_offsets(G, r, Gamma)` | df = Gamma (G . r), kHz |
+| `uniform_positions(length, n, axis, center)` | midpoint-rule slab sample |
+| `ensemble_average(M, weights)` | (3, n_positions) → (3,), the observable |
+| `ideal_spoil(M)` | zeroes Mx, My. An idealization, not physical dephasing |
 
 ### `pulse_shape_list.py` — 25 analytic pulse-shape generators
 `E_BURP_1/2`, `I_BURP_1/2`, `U_BURP`, `RE_BURP`, `GAUSSCASCADE_G3/G4/Q3/Q5`, `HERMITE`,

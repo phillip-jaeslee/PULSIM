@@ -10,19 +10,20 @@ from .rf_shape import RFShape
 from .backend import Backend, NumpyBackend, TorchBackend
 from .pulse_oo import Pulse
 from .pulse_sequence import PulseSequence
-from .bloch import bloch_rotate, bloch_rotate_batch, torch_bloch_rotate, bloch_relax, bloch_relax_batch, affine_propagate
+from .bloch import bloch_rotate, bloch_rotate_batch, torch_bloch_rotate, bloch_relax, bloch_relax_batch, affine_propagate, bloch_delay
 from .liouville import Segment, Delay, IdealPulse, ShapePulseSegment, LiouvilleSequence
 from .parallel import parallel_map
 from .simulate import sim_hard_pulse, sim_import_shaped_pulse, sim_shaped_pulse, sim_own_shaped_pulse
 from .spin_system import SpinSystem
 from .metrics import inversion_fidelity, realized_q, fraction_above
 
+
 __all__ = [
     "RFShape",
     "Backend", "NumpyBackend", "TorchBackend",
     "Pulse",
     "PulseSequence",
-    "bloch_rotate", "bloch_rotate_batch", "torch_bloch_rotate", "bloch_relax", "bloch_relax_batch", "affine_propagate",
+    "bloch_rotate", "bloch_rotate_batch", "torch_bloch_rotate", "bloch_relax", "bloch_relax_batch", "affine_propagate", "bloch_delay",
     "Segment", "Delay", "IdealPulse", "ShapePulseSegment", "LiouvilleSequence",
     "parallel_map",
     "sim_hard_pulse", "sim_import_shaped_pulse", "sim_shaped_pulse", "sim_own_shaped_pulse",

@@ -55,6 +55,44 @@ For this 2 ms 90 degree pulse, `|Mxy|` comes out 0.9874 instead of 1.0000: about
 Equations, sign conventions and the full list of validation requirements are in
 [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §3.
 
+## Gradients
+
+A gradient is a position-dependent offset, so it needs no special propagator —
+just positions in, and an average out:
+
+```python
+import numpy as np
+import PULSIM
+from PULSIM.gradients import gradient_offsets, uniform_positions, ensemble_average
+
+GAMMA = 42.577                                   # kHz/mT
+
+r  = uniform_positions(length=0.01, n_positions=64)          # 10 mm slab
+df = gradient_offsets(G=[0.0, 0.0, 10.0], r=r, Gamma=GAMMA)  # 10 mT/m along z
+
+M = np.zeros((3, 64))
+M[0] = 1.0                                       # transverse, uniform
+
+t = 1.0 / (GAMMA * 10.0 * 0.01)                  # exactly one phase twist
+M = PULSIM.bloch_delay(M, t, df, GAMMA)
+
+print(ensemble_average(M))                       # ~ [0, 0, 0]: signal gone
+```
+
+Reverse the gradient for the same duration and the signal comes back exactly —
+the magnetization was never destroyed, only made invisible to the receiver.
+That is the difference between physical dephasing and `ideal_spoil`, which
+zeroes `Mx` and `My` outright and cannot be undone.
+
+* `G` in **mT/m**, `r` in **m**, offsets in **kHz**. No conversion factors.
+* Positions are sampled at cell midpoints, so complete dephasing cancels
+  exactly rather than approximately.
+* Static or piecewise-constant gradients only: one call per constant segment.
+  Gradient waveforms that vary *within* a single pulse are not supported.
+* No diffusion, flow, concomitant fields, or gradient nonlinearity.
+
+See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §8.
+
 ## Release History
 
 * 0.0.1
