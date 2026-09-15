@@ -24,6 +24,9 @@ GAMMA = 42.577
 
 WAVE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "wave")
 
+needs_wave = pytest.mark.skipif(not os.path.isdir(WAVE),     reason="requires wave/, not distributed with the repository "
+           "(.gitignore excludes wave/ -- see audit item 0-1)",)
+
 @pytest.mark.parametrize("raw,want", [
     ("Excitation",      "Excitation"),
     ("<Excitation>",    "Excitation"),
@@ -66,6 +69,7 @@ def test_array_terminates_on_a_plain_double_hash_line():
 
 # -- Reading real files
 
+@needs_wave
 def test_hypsec_header_fields():
     h = read_bruker_header(os.path.join(WAVE, "HypSec"))
     assert h.exmode == "Adiabatic"        # written <Adiabatic> in the file
@@ -75,6 +79,7 @@ def test_hypsec_header_fields():
     assert h.bwfac == pytest.approx(18.014)
     assert h.integfac == pytest.approx(0.05439915)
 
+@needs_wave
 def test_hypsec_design_round_trips_brukers_own_constants():
     """The file carries the design INPUTS and Bruker's DERIVED constants,
     so it is both the input and the oracle.
@@ -96,6 +101,7 @@ def test_hypsec_design_round_trips_brukers_own_constants():
     assert beta == pytest.approx(design["beta"], rel=1e-12)
     assert mu == pytest.approx(design["mu"], rel=1e-12)
 
+@needs_wave
 def test_exmode_none_is_a_string_not_an_intent():
     """`##$SHAPE_EXMODE= None` is a real Bruker value meaning "not
     declared". It must not be read as adiabatic, and must not be confused
@@ -105,12 +111,14 @@ def test_exmode_none_is_a_string_not_an_intent():
     assert none_valued, "expected files with a literal None exmode"
     assert all(h.intent is None for h in none_valued)
 
+@needs_wave
 def test_number_returns_none_rather_than_raising():
     h = read_bruker_header(os.path.join(WAVE, "HypSec"))
     assert h.number("SHAPE_TYPE") is None         # present but not numeric
     assert h.number("NO_SUCH_FIELD") is None      # absent
     assert h.text("NO_SUCH_FIELD") is None
 
+@needs_wave
 def test_tier_one_files_have_no_design_block():
     h = read_bruker_header(os.path.join(WAVE, "Crp60,0.5,20.1"))
     assert h.design is None
@@ -122,6 +130,7 @@ def test_tier_one_files_have_no_design_block():
 def _corpus():
     return sorted(p for p in glob.glob(os.path.join(WAVE, "*")) if os.path.isfile(p))
 
+@needs_wave
 def test_every_shape_file_parses_and_declares_an_exmode():
     """Not one of the 203 may raise, and all but the non-shape file must
     carry SHAPE_EXMODE."""
@@ -131,6 +140,7 @@ def test_every_shape_file_parses_and_declares_an_exmode():
     missing = [name for name, h in headers if h.exmode is None and name not in empty]
     assert missing == [], missing
 
+@needs_wave
 def test_corpus_census():
     """A deliberate census, not an invariant.
 
@@ -144,6 +154,7 @@ def test_corpus_census():
     assert sum(1 for h in headers if h.intent == "adiabatic") == 47
     assert sum(1 for h in headers if h.design) == 18
 
+@needs_wave
 def test_every_design_block_carries_the_adiabatic_inputs():
     """Tier 2 is only worth having if the keys we need are actually there."""
     for path in _corpus():
@@ -155,6 +166,7 @@ def test_every_design_block_carries_the_adiabatic_inputs():
 
 # -- FileShape takes the file's word
 
+@needs_wave
 @pytest.mark.parametrize("filename,exmode,intent", [
     ("HypSec",          "Adiabatic", "adiabatic"),
     ("Crp100,0.5,20.1", "Adiabatic", "adiabatic"),
@@ -174,6 +186,7 @@ def test_intent_comes_from_the_file(filename, exmode, intent):
     assert shape.intent == intent
     assert shape.calibration_mode == ("adiabatic" if intent else "area")
 
+@needs_wave
 def test_an_explicit_intent_overrides_the_file_in_both_directions():
     """intent=None must mean "I say it has none", not "I didn't say".
 
@@ -190,6 +203,7 @@ def test_an_explicit_intent_overrides_the_file_in_both_directions():
     assert FileShape(path=burbop, duration=0.5,
                      intent="adiabatic").calibration_mode == "adiabatic"
 
+@needs_wave
 def test_area_calibration_of_an_adiabatic_file_is_refused_usefully():
     """Refusing is correct -- a chirp has no meaningful pulse-area flip
     angle -- but the message has to name the way out, or the user is stuck."""
@@ -197,6 +211,7 @@ def test_area_calibration_of_an_adiabatic_file_is_refused_usefully():
     with pytest.raises(NotImplementedError, match="nu1_max"):
         shape.calibration
 
+@needs_wave
 def test_supplying_the_amplitude_directly_still_works():
     """The escape hatch: the spectrometer sets the power, so the user can
     too. Q stays None because it is genuinely unknown, not because
@@ -209,6 +224,7 @@ def test_supplying_the_amplitude_directly_still_works():
     assert pulse.b1_max == pytest.approx(5.0 / GAMMA)
     assert pulse.realized_q is None
 
+@needs_wave
 def test_a_non_adiabatic_file_still_calibrates_by_area():
     """The 156 files that are not adiabatic must be entirely unaffected."""
     shape = FileShape(path=os.path.join(WAVE, "Burbop-180.1"), duration=0.5)
