@@ -46,6 +46,19 @@ Imports: `numpy` only
 | `ensemble_average(M, weights)` | (3, n_positions) → (3,), the observable |
 | `ideal_spoil(M)` | zeroes Mx, My. An idealization, not physical dephasing |
 
+### `bruker.py` — Bruker/TopSpin shape-file headers
+Imports: standard library only (`os`, `re`, `dataclasses`)
+
+| Symbol | Notes |
+|---|---|
+| `parse_header(text)` | scalars + 16-slot `(0..15)` arrays, normalized |
+| `_normalize(value)` | strips whitespace, trailing `\`, angle brackets |
+| `BrukerHeader` | typed access; `exmode`, `shape_type`, `totrot`, `bwfac` |
+| `BrukerHeader.intent` | `"adiabatic"` from `SHAPE_EXMODE`; 47 files in `wave/` |
+| `BrukerHeader.integfac` | `SHAPE_INTEGFAC` — DIAGNOSTIC, never calibrate from it |
+| `BrukerHeader.design` | tier 2: `SHL_*` slot 0, 18 files; `mu`, `beta`, `sw`, `trunclev` |
+| `read_bruker_header(path)` | never raises on a non-shape file |
+
 ### `pulse_shape_list.py` — 25 analytic pulse-shape generators
 `E_BURP_1/2`, `I_BURP_1/2`, `U_BURP`, `RE_BURP`, `GAUSSCASCADE_G3/G4/Q3/Q5`, `HERMITE`,
 `SEDUCE_1`, `SNEEZE`, `QSNEEZE`, `eSNOB`, `i2SNOB`, `i3SNOB`, `rSNOB`, `dSNOB`,

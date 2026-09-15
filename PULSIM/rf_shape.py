@@ -51,6 +51,7 @@ import warnings
 from scipy.interpolate import CubicSpline
 from .file_import import import_file
 from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, signed_integral_of
+from .bruker import read_bruker_header
 
 
 __all__ = ["RFShape", "AnalyticShape", "HardShape", "FileShape"]
@@ -1322,6 +1323,7 @@ class HardShape(RFShape):
 # imported waveforms
 # --------------------------------------------------------------------------
 
+_INTENT_UNSET = object()
 class FileShape(RFShape):
     name = "file"
     """
@@ -1339,13 +1341,25 @@ class FileShape(RFShape):
     and the torch path builds ``cos(-a) + i sin(-a)`` — the same thing.
     """
 
-    def __init__(self, path, duration=None, amplitude=1.0, points=None, resample_to=None, intent=None, **params):
+    def __init__(self, path, duration=None, amplitude=1.0, points=None, resample_to=None, intent=_INTENT_UNSET, **params):
         if points is not None:
             raise TypeError(
                 "FileShape takes its point count from the file; do not pass points="
             )
         self.path = path
-        self.intent = intent # declared by the caller; read from the file header (SHAPE_EXMODE) once that lands
+        self.header = read_bruker_header(path)
+
+        # Intent precedence: an explicit intent= wins, so a caller simulating a
+        # modified or mislabelled waveform can override the file -- including
+        # intent=None to force area calibration. Otherwise the file's own
+        # SHAPE_EXMODE decides. This is what replaces the 350-degree
+        # total-rotation heuristic deleted in Phase 3: Bruker distinguishes
+        # Adiabatic from BOP, Universal, Decoupling and the rest, and gets
+        # Burbop-180.1 (BOP) and BadCop1 (Inversion) right where the heuristic
+        # did not. Files that are not Bruker shape files parse to an empty
+        # header, so intent simply stays None.
+
+        self.intent = self.header.intent if intent is _INTENT_UNSET else intent
         xy = np.asarray(self._read(path), dtype=float)
         if resample_to is not None:
             xy = self._resample(xy, duration, resample_to)
@@ -1381,6 +1395,25 @@ class FileShape(RFShape):
         phase_deg = self.xy[:, 1]
         phasor = np.exp(-1j * np.deg2rad(phase_deg))
         return magnitude * phasor * self.amplitude
+
+    @property
+    def calibration(self):
+        if self.calibration_mode != "adiabatic":
+            return super().calibration
+
+        raise NotImplementedError(
+            f"{self.path} declares SHAPE_EXMODE={self.header.exmode!r}, so it "
+            f"cannot be calibrated from a flip angle: an adiabatic pulse's "
+            f"behaviour is set by its sweep rate and adiabaticity factor Q, not "
+            f"by its pulse area.\n"
+            f"  - Give the amplitude directly:  Pulse(shape, nu1_max=<kHz>)\n"
+            f"  - Or override the file's claim: FileShape(..., intent=None)\n"
+            f"Design data present in this file: "
+            f"SHL_ block {'yes' if self.header.design else 'no'}, "
+            f"SHAPE_PARAMETERS "
+            f"{'yes' if self.header.text('SHAPE_PARAMETERS') else 'no'}. "
+            f"Deriving a calibration from either is not yet implemented."            
+        )
 
     def __repr__(self):
         return (f"{type(self).__name__}(path={self.path!r}, points={self.points}, "

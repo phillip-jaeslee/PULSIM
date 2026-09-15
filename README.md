@@ -93,6 +93,46 @@ zeroes `Mx` and `My` outright and cannot be undone.
 
 See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §8.
 
+## Vendor shape files
+
+PULSIM reads the header of a Bruker/TopSpin shape file, not just its numbers:
+
+```python
+from PULSIM.bruker import read_bruker_header
+
+h = read_bruker_header("wave/HypSec")
+print(h.exmode, h.shape_type, h.intent)   # Adiabatic Inversion adiabatic
+print(h.totrot, h.bwfac)                  # 180.0 18.014
+print(h.design["mu"], h.design["beta"])   # 5.92944374678314 5.29829236561048
+```
+
+`FileShape` uses this automatically: a file that declares
+`##$SHAPE_EXMODE= Adiabatic` is treated as adiabatic, so the vendor decides
+rather than a heuristic.
+
+```python
+from PULSIM.rf_shape import FileShape
+
+FileShape(path="wave/HypSec",       duration=1.0).intent   # 'adiabatic'
+FileShape(path="wave/Burbop-180.1", duration=0.5).intent   # None  (EXMODE=BOP)
+```
+
+* Pass `intent=` to contradict the file — including `intent=None` to clear its
+  claim and force area calibration.
+* An adiabatic file **cannot** be calibrated from a flip angle; a chirp has no
+  meaningful pulse area. Supply the amplitude the way a spectrometer does:
+  `Pulse(shape, nu1_max=<kHz>)`. `realized_q` is then `None`, because the
+  adiabaticity factor is genuinely unknown for an imported file.
+* `SHAPE_INTEGFAC` is exposed as `header.integfac` for inspection but is **not**
+  used for calibration. Across the 203 files in `wave/` it agrees with PULSIM's
+  own integral for fewer than half, in ways neither plausible normalization
+  convention explains. See the specification before trusting it.
+* 18 files carry the full ShapeTool `SHL_*` design block, reachable as
+  `header.design`. For those, the file's own `beta` and `mu` agree with
+  PULSIM's design relations to one part in 10^15.
+
+See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §9.
+
 ## Release History
 
 * 0.0.1

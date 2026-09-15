@@ -59,8 +59,21 @@ class Pulse:
 
     @property
     def realized_q(self):
-        """Adiabaticity actually achieved. None for non-adiabatic shapes."""
+        """The adiabaticity factor this pulse actually achieves, or None.
+
+        None in two cases, and they mean different things. The shape is not
+        adiabatic, so Q is not a meaningful quantity for it -- or the shape
+        declares itself adiabatic but carries no adiabatic calibration, which
+        is the normal state for an imported vendor file whose design
+        parameters PULSIM cannot yet read. Q is genuinely unknowable there,
+        and None says so rather than crashing a caller who has already
+        supplied nu1_max and is entitled to an answer.
+        """
         if self.shape.calibration_mode != "adiabatic":
+            return None
+        try:
+            calibration = self.shape.calibration
+        except NotImplementedError:
             return None
         return self.shape.calibration.q_for(self.nu1_max, self.shape.duration)
 
