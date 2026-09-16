@@ -58,8 +58,44 @@ ANALYTIC_NAMES = [
     "swrl11", "swrl12", "swrl17",
 ]
 
+# Shapes whose definition has deliberately changed since the fixture was
+# frozen, each with the reason. The fixture is NOT regenerated for these:
+# regenerating rebaselines all 25 shapes at once and silently drops the
+# legacy guarantee for the 24 that did not change. A name listed here must
+# be pinned by its own test instead.
+DIVERGED_FROM_LEGACY = {
+    "sinc": "sinc argument moved from absolute milliseconds to normalised "
+            "time 2t/T, so the pulse is one lobe at every duration "
+            "(tests/test_sinc_normalization.py)",
+}
 
-@pytest.mark.parametrize("name", ANALYTIC_NAMES)
+LEGACY_EQUIVALENT_NAMES = [n for n in ANALYTIC_NAMES if n not in DIVERGED_FROM_LEGACY]
+
+
+@pytest.mark.parametrize("name", sorted(DIVERGED_FROM_LEGACY))
+def test_diverged_shape_really_differs_from_legacy(golden, params, name):
+    """A name on the diverged list must actually differ from the fixture.
+    Otherwise the exclusion is dead weight hiding a shape that could still
+    be held to the legacy guarantee."""
+    t_max, N = params
+    actual = RFShape.create(name, duration=t_max, points=N).envelope()
+    assert not np.allclose(actual.real, np.real(golden[f"shape/{name}"]),
+                           rtol=1e-13, atol=1e-15), (
+        f"{name} is listed in DIVERGED_FROM_LEGACY but still matches the "
+        f"fixture -- remove it from that dict")
+
+
+def test_sinc_divergence_is_exactly_the_normalised_definition(golden, params):
+    """Pin what sinc became, at the fixture's own parameters, against a
+    formula written out here rather than against the implementation."""
+    t_max, N = params
+    shape = RFShape.create("sinc", duration=t_max, points=N)
+    expected = np.hamming(N).T * np.sinc(2.0 * shape.sample_times() / t_max)
+    np.testing.assert_allclose(shape.envelope().real, expected, rtol=1e-13, atol=1e-15)
+    np.testing.assert_allclose(shape.envelope().imag, 0.0, atol=1e-15)
+
+
+@pytest.mark.parametrize("name", LEGACY_EQUIVALENT_NAMES)
 def test_envelope_matches_legacy(golden, params, name):
     """RFShape.create(name).envelope() == the old shape_funcs[name]()."""
     t_max, N = params
@@ -71,7 +107,7 @@ def test_envelope_matches_legacy(golden, params, name):
     np.testing.assert_allclose(actual.imag, np.imag(expected), rtol=1e-13, atol=1e-15)
 
 
-@pytest.mark.parametrize("name", ANALYTIC_NAMES)
+@pytest.mark.parametrize("name", LEGACY_EQUIVALENT_NAMES)
 def test_phase_matches_legacy(golden, params, name):
     """
     The unified phase formula reproduces BOTH legacy branches.
@@ -87,7 +123,7 @@ def test_phase_matches_legacy(golden, params, name):
     np.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-12)
 
 
-@pytest.mark.parametrize("name", ANALYTIC_NAMES)
+@pytest.mark.parametrize("name", LEGACY_EQUIVALENT_NAMES)
 def test_amplitude_profile_is_abs_of_envelope(golden, params, name):
     t_max, N = params
     shape = RFShape.create(name, duration=t_max, points=N)

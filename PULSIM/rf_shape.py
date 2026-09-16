@@ -1276,11 +1276,28 @@ class CaPowHsec(AnalyticShape):
 class SincShape(RFShape):
 
     name = "sinc"
-    """Hamming-windowed sinc. Was an inline lambda in shape_funcs."""
+    """Hamming-windowed single-lobe sinc.
+
+    The sinc argument is the NORMALIZED time 2t/T, so the first zero
+    crossings sit at the pulse edges (t = +/- T/2) at every duration: one
+    central lobe, stretched or compressed by `duration`, never reshaped.
+
+    This was previously np.sinc(t) with t in absolute milliseconds from
+    sample_times(), which pinned the zeros at +/- 1 ms whatever the
+    duration. A 1 ms pulse then held no zero crossing at all and a 4 ms
+    pulse held four lobes, so "sinc" named a different waveform at every
+    duration and nu1_max did not scale as 1/T. The 2 ms waveform is
+    bit-identical under both definitions (2t/T = t when T = 2), so no
+    stored reference changes.
+
+    A multi-lobe sinc, if it is ever wanted, belongs here as an explicit
+    time-bandwidth product or zero-crossing count -- not as a
+    duration-dependent sinc argument.
+    """
 
     def _build(self):
         t = self.sample_times()
-        return np.hamming(self.points).T * np.sinc(t) * self.amplitude
+        return np.hamming(self.points).T * np.sinc(2.0 * t / self.duration) * self.amplitude
 
 
 class CosShape(RFShape):
