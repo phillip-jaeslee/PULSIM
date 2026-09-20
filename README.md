@@ -3,9 +3,10 @@
 
 <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=Python&logoColor=white"/> <img src="https://img.shields.io/badge/Google Colab-F9AB00?style=flat-square&logo=Google Colab&logoColor=white"/>
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_colab_oo.ipynb)
-
-
+| Notebook | What it does | |
+|---|---|---|
+| **Shaped pulses** | One pulse at a time — excitation profiles, pulse trains, the shape catalogue | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_colab_oo.ipynb) |
+| **Pulse sequences** | Coupled spins and delays — spin echo, INEPT, BIRD, in the density matrix | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_density_colab.ipynb) |
 
 ![](header.png)
 
