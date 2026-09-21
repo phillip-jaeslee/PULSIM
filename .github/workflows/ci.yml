@@ -16,6 +16,36 @@ jobs:
       - name: Run test suite
         run: pytest tests -q
 
+  reproducible:
+    # The claim the education paper makes -- "clone it and it runs" -- expressed
+    # as a job. The other two jobs test the package; this one tests the things we
+    # actually tell people to open. checkout is a fresh clone, and the install is
+    # the plain `pip install .` a reader would type, not `-e`.
+    name: Fresh clone runs (notebooks + tutorials)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install as a reader would, plus a kernel to execute notebooks
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install ".[viz]" nbclient ipykernel
+          python -m ipykernel install --user --name python3
+      - name: Execute every notebook and every wave/-free tutorial
+        env:
+          MPLBACKEND: Agg
+        run: python tools/check_reproducible.py
+      - name: Keep the figures the run produced
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-figures
+          path: tutorial_figures/
+          if-no-files-found: ignore
+
   base-only:
     # The JupyterLite/Pyodide guarantee, expressed as a test.
     #
