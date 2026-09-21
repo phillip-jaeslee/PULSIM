@@ -11,7 +11,6 @@ temp/
 tutorial_figures/
 test/
 *.egg-info/
-docs/
 .pytest_cache/
 build/
 dist/
