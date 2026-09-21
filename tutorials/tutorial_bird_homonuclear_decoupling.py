@@ -31,13 +31,30 @@ each one lives in during the two tau delays -- and that's enough. Verified numer
    only the two spins' individual offsets get refocused, not the coupling
    between them) -- Ix(I) comes back modulated by exactly
    cos(2*pi*J(HH)*tau'), confirmed to match the exact simulation
-   bit-for-bit. BIRD, by contrast, inverts ONLY I not (not I'), which DOES
-   refocus their mutual J(HH) over the outer echo -- Ix(I) comes back
-   completely independent of tau', i.e. decoupled from I' even though no
-   pulse ever touched I' selectively. The residual amplitude isn't
-   exactly 1 -- it carries a small, tau'-independent "toll"
+   bit-for-bit. BIRD, by contrast, inverts ONLY I (not I'), which DOES
+   refocus their mutual J(HH) over the outer echo.
+
+   BUT the cluster does not only invert I. A BIRD(d,X) element inverts the
+   directly bonded protons AND the heteronucleus X, leaving remote protons
+   alone (Uhrin et al.'s d,X nomenclature; see also Garbow's original
+   Fig. 1). Left like that, BOTH partners of the I-S pair come out of the
+   cluster inverted, so J(CH) is no longer refocused across the outer echo
+   either -- and at 140 Hz it dominates the 7 Hz coupling the element was
+   supposed to remove. Ix(I) then follows -cos(pi*J(CH)*2*tau'), which is
+   emphatically not decoupled. A coarse tau' grid steps over whole periods
+   of that 140 Hz modulation and makes the curve look flat, which is how
+   this went unnoticed: it is an aliasing artefact, not decoupling.
+
+   The standard remedy is one more 180 on the S channel at the end of the
+   element, so that S experiences no net rotation. With that restore in
+   place Ix(I) IS independent of tau' -- decoupled from I' even though no
+   pulse ever touched I' selectively. The residual amplitude isn't exactly
+   1: it carries a small, tau'-independent "toll"
    (cos(pi*J(HH)*2*tau_BIRD)) from J(HH) evolving, unrefocused, during
    BIRD's own short internal delays -- confirmed to match exactly.
+
+   Both versions are plotted below, because the difference between them is
+   the point.
 """
 
 import numpy as np
@@ -84,11 +101,18 @@ for final_phase, label in [(0.0, "90(+x)...90(+x)"), (PI, "90(+x)...90(-x)")]:
 
 # -- Part 2: BIRD as a homonuclear decoupler -------------------------
 def run_echo(tau_outer, mode):
-    """tau' -- [plain 180, BIRD, or nothing] -- tau', starting from Ix(I)."""
+    """tau' -- [plain 180, BIRD, or nothing] -- tau', starting from Ix(I).
+
+    'bird'          : the cluster exactly as published, which leaves S inverted
+    'bird_restored' : the same, plus a closing 180 on S so that S sees no net
+                      rotation and J(CH) still refocuses across the outer echo
+    """
     if mode == 'plain180':
         middle = [IdealPulse(PI, phase=0.0, channel='H')]
     elif mode == 'bird':
         middle = bird_cluster(final_phase=0.0)
+    elif mode == 'bird_restored':
+        middle = bird_cluster(final_phase=0.0) + [IdealPulse(PI, phase=0.0, channel='13C')]
     else:
         middle = []
     segments = [Delay(tau_outer)] + middle + [Delay(tau_outer)]
@@ -99,15 +123,23 @@ tau_bird = 1.0 / (2 * J_CH / 1000.0)
 bird_toll = np.cos(PI * (J_HH / 1000.0) * 2 * tau_bird)   # predicted BIRD-internal residual
 
 taus = np.linspace(0.0, 1000.0 / J_HH, 5000)   # ms, sweep out past one full J_HH period
-amp_plain = np.array([coeff(run_echo(t, 'plain180'), IxI) for t in taus])
-amp_bird  = np.array([coeff(run_echo(t, 'bird'),     IxI) for t in taus])
+amp_plain    = np.array([coeff(run_echo(t, 'plain180'),      IxI) for t in taus])
+amp_restored = np.array([coeff(run_echo(t, 'bird_restored'), IxI) for t in taus])
 theory_plain = np.cos(twoPI * (J_HH / 1000.0) * taus)
 
+# The unrestored cluster modulates at J(CH), 20x faster than J(HH), so it needs
+# its own fine grid -- sampled on the coarse one above it would alias into a
+# flat line, which is exactly the trap this part of the tutorial is about.
+taus_fine = np.linspace(0.0, 2000.0 / J_CH, 400)      # ms, two periods of 1/J(CH)
+amp_raw_fine = np.array([coeff(run_echo(t, 'bird'), IxI) for t in taus_fine])
+theory_raw = -bird_toll * np.cos(PI * (J_CH / 1000.0) * 2 * taus_fine)
 
-fig, axs = plt.subplots(2, 1, figsize=(7, 8))
+
+fig, axs = plt.subplots(3, 1, figsize=(7, 11))
 axs[0].plot(taus, amp_plain, 'o', label="plain 180 in middle (simulated)", markersize=1.0)
 axs[0].plot(taus, theory_plain, '-', label=r"theory: $\cos(2\pi J_{HH}\tau')$", markersize=1.0)
-axs[0].plot(taus, amp_bird, 's', color='C3', label="BIRD in middle (simulated)", markersize=1.0)
+axs[0].plot(taus, amp_restored, 's', color='C3',
+            label="BIRD + 180(S) in middle (simulated)", markersize=1.0)
 axs[0].axhline(-bird_toll, color='C3', linestyle=':',
                label=r"BIRD's fixed toll: $-\cos(\pi J_{HH}\cdot 2\tau_{BIRD})$")
 axs[0].set_xlabel(r"$\tau'$ (ms, outer half-echo)")
@@ -141,6 +173,11 @@ def draw_bird_scheme(ax):
     pulse(x2, y_I, 0.35, True,  r'$180_x$')
     pulse(x2, y_S, 0.35, True,  r'$180_x$')
     pulse(x3, y_I, 0.15, False, r'$90_{\pm x}$')
+    # the restoring 180 on S: without it the cluster leaves S inverted and
+    # J(CH) stops refocusing across the outer echo (see the middle panel)
+    pulse(x3 + 0.45, y_S, 0.35, True, r'$180_x$')
+    ax.text(x3 + 0.45, y_S - 0.45, 'restore S', ha='center', va='top',
+            fontsize=8, color='C0')
     pulse(x4, y_I, 0.15, False, r'$90_x$')
 
     bracket(x0, x2, -0.55, r"$\tau'$")
@@ -152,15 +189,37 @@ def draw_bird_scheme(ax):
     ax.set_xlim(-1.5, 10.5)
     ax.set_ylim(-1.2, 2.0)
     ax.axis('off')
-    ax.set_title("BIRD substituted for the middle 180 of a homonuclear echo (schematic)")
+    ax.set_title("BIRD + restoring 180(S), in the middle of a homonuclear echo (schematic)")
 
-draw_bird_scheme(axs[1])
+axs[1].plot(taus_fine, amp_raw_fine, color='C1', lw=2,
+            label="BIRD as published, S left inverted")
+axs[1].plot(taus_fine, theory_raw, '--', color='0.4', lw=1,
+            label=r"$-\mathrm{toll}\cdot\cos(\pi J_{CH}\cdot 2\tau')$")
+axs[1].plot(taus_fine, [coeff(run_echo(t, 'bird_restored'), IxI) for t in taus_fine],
+            color='C3', lw=2, label="BIRD + 180(S)")
+axs[1].set_xlabel(r"$\tau'$ (ms, zoomed to two periods of $1/J_{CH}$)")
+axs[1].set_ylabel(r"$I_x(I)$ amplitude")
+axs[1].set_title("Why S has to be restored: J(CH) is 20x faster than J(HH)")
+axs[1].legend(fontsize=8)
+
+draw_bird_scheme(axs[2])
 
 plt.tight_layout()
 plt.savefig("tutorial_figures/tutorial_bird_homonuclear_decoupling.png")
 plt.show()
 
-print(f"\nBIRD's fixed internal toll: cos(pi*J_HH*2*tau_BIRD) = {bird_toll:.4f}  "
-      f"(matches simulated BIRD amplitude at tau'=0)")
-print(f"BIRD amplitude std dev across the tau' sweep: {amp_bird.std():.2e}  (flat -> decoupled)")
-print(f"Plain-180 amplitude range across the sweep: [{amp_plain.min():.4f}, {amp_plain.max():.4f}]  (fully J_HH-modulated)")
+print(f"\nBIRD's fixed internal toll: cos(pi*J_HH*2*tau_BIRD) = {bird_toll:.4f}")
+print(f"BIRD + 180(S): amplitude std dev across the tau' sweep: "
+      f"{amp_restored.std():.2e}  (flat -> decoupled)")
+print(f"BIRD as published: std dev over the J(CH) zoom: {amp_raw_fine.std():.2e}  "
+      f"(J(CH)-modulated, NOT decoupled)")
+print(f"   and it tracks -toll*cos(pi*J_CH*2*tau') to "
+      f"{np.abs(amp_raw_fine - theory_raw).max():.2e}")
+print(f"Plain-180 amplitude range across the sweep: [{amp_plain.min():.4f}, "
+      f"{amp_plain.max():.4f}]  (fully J_HH-modulated)")
+
+# The cluster's effect on S, measured rather than asserted.
+_ops_S = coeff(LiouvilleSequence(bird_cluster(0.0), spin_system()).propagate(
+    embed(Iz(), 2, N_SPINS)), embed(Iz(), 2, N_SPINS))
+print(f"BIRD(d,X) leaves S at Iz(S) = {_ops_S:+.4f}  "
+      f"(inverted -- this is why the restoring 180 is needed)")
