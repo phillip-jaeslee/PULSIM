@@ -25,7 +25,7 @@ This document defines the physical model independently of any particular softwar
 
 The initial reconstruction models a classical bulk magnetization vector
 
-$$
+```math
 \mathbf M(t)
 =
 \begin{pmatrix}
@@ -33,7 +33,7 @@ M_x(t)\\
 M_y(t)\\
 M_z(t)
 \end{pmatrix}
-$$
+```
 
 in a frame rotating about the laboratory $z$ axis. The validated model includes RF fields, resonance offsets, phenomenological $T_1$ and $T_2$ relaxation, and static or piecewise-constant field gradients represented as position-dependent offsets (Section 8). Chemical exchange, diffusion, flow, radiation damping, concomitant (Maxwell) fields, gradient nonlinearity, and quantum-mechanical coupled-spin evolution are outside the model and must be introduced later as separately validated extensions.
 
@@ -53,9 +53,9 @@ The reference implementation shall use the following units without implicit conv
 
 The identity
 
-$$
+```math
 1\ \mathrm{kHz}=1\ \mathrm{cycle\,ms^{-1}}
-$$
+```
 
 makes $2\pi\bar\gamma B\,\Delta t$ dimensionless and expressed in radians when $\bar\gamma$ is in kHz/mT, $B$ is in mT, and $\Delta t$ is in ms.
 
@@ -67,9 +67,9 @@ Both $\bar\gamma$ and $\gamma$ are signed nuclear constants. Their sign must not
 
 The symbol $\bar\gamma$ always denotes cyclic frequency per field,
 
-$$
+```math
 \bar\gamma=\frac{\gamma}{2\pi},
-$$
+```
 
 whereas $\gamma$ denotes angular frequency per field. Code, documentation, and manuscript equations must not use the same symbol for both quantities.
 
@@ -77,23 +77,23 @@ whereas $\gamma$ denotes angular frequency per field. Code, documentation, and m
 
 The complex RF waveform is defined as
 
-$$
+```math
 B_1(t)=B_x(t)+iB_y(t).
-$$
+```
 
 For an RF magnitude $A(t)\geq0$ and phase $\phi(t)$,
 
-$$
+```math
 B_1(t)=A(t)e^{i\phi(t)},
-$$
+```
 
 so that
 
-$$
+```math
 B_x(t)=A(t)\cos\phi(t),
 \qquad
 B_y(t)=A(t)\sin\phi(t).
-$$
+```
 
 Consequently, phase $0$ represents a field along $+x$, and phase $+\pi/2$ represents a field along $+y$. A pulse axis is therefore determined by the complex RF phase; the physical propagation interface should not require a separate ambiguous `axis` argument.
 
@@ -101,9 +101,9 @@ Consequently, phase $0$ represents a field along $+x$, and phase $+\pi/2$ repres
 
 The signed rotating-frame frequency offset is defined as
 
-$$
+```math
 \Delta f=f_{\mathrm{spin}}-f_{\mathrm{RF}}.
-$$
+```
 
 Both frequencies must use the same signed-frequency and rotating-frame convention. This point is especially important for nuclei with negative $\gamma$; a positive frequency magnitude reported by an instrument is not automatically a signed Larmor frequency.
 
@@ -113,7 +113,7 @@ For the numerical model, $\Delta f$ is the authoritative rotating-frame paramete
 
 The rotating-frame effective magnetic field is
 
-$$
+```math
 \mathbf B_{\mathrm{eff}}(t)
 =
 \begin{pmatrix}
@@ -121,11 +121,11 @@ B_x(t)\\[4pt]
 B_y(t)\\[4pt]
 \dfrac{\Delta f}{\bar\gamma}
 \end{pmatrix}.
-$$
+```
 
 This effective-field representation is valid for $\bar\gamma\neq0$. The corresponding angular-frequency vector is
 
-$$
+```math
 \boldsymbol\Omega_{\mathrm{eff}}(t)
 =
 2\pi\bar\gamma\,\mathbf B_{\mathrm{eff}}(t)
@@ -135,7 +135,7 @@ $$
 2\pi\bar\gamma B_y(t)\\[4pt]
 2\pi\Delta f
 \end{pmatrix}.
-$$
+```
 
 The angular-frequency-vector form is preferred in the numerical kernel because it makes the offset convention explicit and avoids dividing by $\bar\gamma$.
 
@@ -143,7 +143,7 @@ The angular-frequency-vector form is preferred in the numerical kernel because i
 
 PULSIM adopts the cross-product convention
 
-$$
+```math
 \frac{d\mathbf M}{dt}
 =
 \boldsymbol\Omega_{\mathrm{eff}}\times\mathbf M
@@ -153,11 +153,11 @@ M_x/T_2\\[4pt]
 M_y/T_2\\[4pt]
 (M_z-M_0)/T_1
 \end{pmatrix}.
-$$
+```
 
 Equivalently,
 
-$$
+```math
 \frac{d\mathbf M}{dt}
 =
 \gamma\,\mathbf B_{\mathrm{eff}}\times\mathbf M
@@ -167,37 +167,37 @@ M_x/T_2\\[4pt]
 M_y/T_2\\[4pt]
 (M_z-M_0)/T_1
 \end{pmatrix}.
-$$
+```
 
 The component equations are
 
-$$
+```math
 \frac{dM_x}{dt}
 =
 \Omega_y M_z-\Omega_z M_y-\frac{M_x}{T_2},
-$$
+```
 
-$$
+```math
 \frac{dM_y}{dt}
 =
 \Omega_z M_x-\Omega_x M_z-\frac{M_y}{T_2},
-$$
+```
 
-$$
+```math
 \frac{dM_z}{dt}
 =
 \Omega_x M_y-\Omega_y M_x-\frac{M_z-M_0}{T_1}.
-$$
+```
 
 Here $M_0$ is the equilibrium longitudinal magnetization in the selected normalization. The usual normalized initial condition is
 
-$$
+```math
 \mathbf M(0)=
 \begin{pmatrix}
 0\\0\\M_0
 \end{pmatrix},
 \qquad M_0=1.
-$$
+```
 
 ### 1.8 Observable consequences of the convention
 
@@ -205,27 +205,19 @@ The following are defining tests, not optional examples:
 
 1. For positive $\bar\gamma$, an on-resonance positive $x$-directed $90^\circ$ pulse maps
 
-   $$
-   +M_z\longrightarrow-M_y.
-   $$
+   $+M_z\longrightarrow-M_y.$
 
 2. For positive $\bar\gamma$, an on-resonance positive $y$-directed $90^\circ$ pulse maps
 
-   $$
-   +M_z\longrightarrow+M_x.
-   $$
+   $+M_z\longrightarrow+M_x.$
 
 3. Define the complex transverse magnetization as
 
-   $$
-   M_+=M_x+iM_y.
-   $$
+   $M_+=M_x+iM_y.$
 
    During free precession with $\Delta f>0$ and without relaxation,
 
-   $$
-   M_+(t)=M_+(0)e^{+i2\pi\Delta f t}.
-   $$
+   $M_+(t)=M_+(0)e^{+i2\pi\Delta f t}.$
 
    This must be tested at a phase that distinguishes the two sign conventions.
    At $\Delta f\,t=0.5$ both give $-1$, and at integer values both give $+1$.
@@ -235,17 +227,11 @@ The following are defining tests, not optional examples:
 
 5. With finite relaxation and no applied field,
 
-   $$
-   M_x(t)=M_x(0)e^{-t/T_2},
-   $$
+   $M_x(t)=M_x(0)e^{-t/T_2},$
 
-   $$
-   M_y(t)=M_y(0)e^{-t/T_2},
-   $$
+   $M_y(t)=M_y(0)e^{-t/T_2},$
 
-   $$
-   M_z(t)=M_0+[M_z(0)-M_0]e^{-t/T_1}.
-   $$
+   $M_z(t)=M_0+[M_z(0)-M_0]e^{-t/T_1}.$
 
 Every backend must reproduce these results within a documented numerical tolerance.
 
@@ -283,15 +269,15 @@ The following choices should be explicitly approved before implementation begins
 
 PULSIM's rotation sense is
 
-$$
+```math
 \frac{d\mathbf M}{dt}=\boldsymbol\Omega_{\mathrm{eff}}\times\mathbf M,
-$$
+```
 
 equivalently, in product-operator form,
 
-$$
+```math
 I_z\;\xrightarrow{\;\theta I_x\;}\;I_z\cos\theta-I_y\sin\theta,
-$$
+```
 
 so a $90^\circ$ pulse of phase $0$ takes $+I_z$ to $-I_y$, a $90^\circ$ pulse of
 phase $\pi/2$ takes $+I_z$ to $+I_x$, and during free precession
@@ -345,11 +331,11 @@ rates are inputs, never derived from a motional model.
 
 ### 3.2 Relaxation matrix and equilibrium
 
-$$
-\mathbf R=\operatorname{diag}\!\left(\frac{1}{T_2},\ \frac{1}{T_2},\ \frac{1}{T_1}\right),
+```math
+\mathbf R=\mathrm{diag}\!\left(\frac{1}{T_2},\ \frac{1}{T_2},\ \frac{1}{T_1}\right),
 \qquad
 \mathbf M_{\mathrm{eq}}=\begin{pmatrix}0\\0\\M_0\end{pmatrix}.
-$$
+```
 
 $T_1$ and $T_2$ are in milliseconds, so the entries of $\mathbf R$ are in
 $\mathrm{ms}^{-1}$, consistent with Section 1.2.
@@ -360,24 +346,24 @@ time is an error, not shorthand for instantaneous relaxation, and must raise.
 
 With this notation the Bloch equation of Section 1.7 is
 
-$$
+```math
 \frac{d\mathbf M}{dt}
 =\boldsymbol\Omega_{\mathrm{eff}}\times\mathbf M-\mathbf R\left(\mathbf M-\mathbf M_{\mathrm{eq}}\right).
-$$
+```
 
 ### 3.3 Free relaxation
 
 With $\boldsymbol\Omega_{\mathrm{eff}}=\mathbf 0$ the three components decouple
 and the solution is closed-form:
 
-$$
+```math
 M_x(t)=M_x(0)\,e^{-t/T_2},\qquad
 M_y(t)=M_y(0)\,e^{-t/T_2},
-$$
+```
 
-$$
+```math
 M_z(t)=M_0+\left[M_z(0)-M_0\right]e^{-t/T_1}.
-$$
+```
 
 Implementations must use this expression during delays rather than any
 stepped approximation. Two consequences are required to hold exactly rather
@@ -390,43 +376,43 @@ $\mathbf M_{\mathrm{eq}}$.
 Over an interval on which $\boldsymbol\Omega_{\mathrm{eff}}$ is constant, the
 equation of Section 3.2 is linear and inhomogeneous,
 
-$$
+```math
 \frac{d\mathbf M}{dt}=\mathbf L\,\mathbf M+\mathbf c,
 \qquad
 \mathbf L=\hat{\boldsymbol\Omega}-\mathbf R,
 \qquad
 \mathbf c=\mathbf R\,\mathbf M_{\mathrm{eq}},
-$$
+```
 
 where $\hat{\boldsymbol\Omega}$ is the matrix representing the cross product,
 $\hat{\boldsymbol\Omega}\mathbf M=\boldsymbol\Omega_{\mathrm{eff}}\times\mathbf M$:
 
-$$
+```math
 \hat{\boldsymbol\Omega}=
 \begin{pmatrix}
 0 & -\Omega_z & \Omega_y\\
 \Omega_z & 0 & -\Omega_x\\
 -\Omega_y & \Omega_x & 0
 \end{pmatrix}.
-$$
+```
 
 The exact solution over a step $\Delta t$ is therefore affine,
 $\mathbf M\mapsto \mathbf A\mathbf M+\mathbf b$. Both $\mathbf A$ and
 $\mathbf b$ are obtained from a single matrix exponential of the augmented
 $4\times4$ generator
 
-$$
+```math
 \mathbf G=\begin{pmatrix}\mathbf L & \mathbf c\\ \mathbf 0 & 0\end{pmatrix},
 \qquad
 \exp(\mathbf G\,\Delta t)=
 \begin{pmatrix}\mathbf A & \mathbf b\\ \mathbf 0 & 1\end{pmatrix}.
-$$
+```
 
 The augmented form is required rather than the algebraically equivalent
 
-$$
+```math
 \mathbf M(\Delta t)=e^{\mathbf L\Delta t}\left(\mathbf M(0)+\mathbf L^{-1}\mathbf c\right)-\mathbf L^{-1}\mathbf c,
-$$
+```
 
 because $\mathbf L$ is singular in precisely the case that matters most:
 $T_1=T_2=\infty$, where $\mathbf L=\hat{\boldsymbol\Omega}$ and
@@ -442,13 +428,13 @@ $4\times4$ matrix exponential per step, and is not the production path.
 Rotation and relaxation do not commute in general. Writing
 $\mathbf R=r_2\mathbf I+(r_1-r_2)\,\mathbf e_z\mathbf e_z^{\mathsf T}$,
 
-$$
+```math
 \left[\hat{\boldsymbol\Omega},\mathbf R\right]=\mathbf 0
 \quad\Longleftrightarrow\quad
 T_1=T_2
 \quad\text{or}\quad
 \Omega_x=\Omega_y=0 .
-$$
+```
 
 So the two generators commute exactly during a delay, where the effective
 field is purely longitudinal, and in the isotropic-relaxation case; during a
@@ -456,12 +442,12 @@ transverse RF field with $T_1\neq T_2$ they do not.
 
 The production path is therefore the symmetric (Strang) splitting
 
-$$
+```math
 \mathcal S(\Delta t)
 =\mathcal E\!\left(\tfrac{\Delta t}{2}\right)\circ
 \mathcal R(\Delta t)\circ
 \mathcal E\!\left(\tfrac{\Delta t}{2}\right),
-$$
+```
 
 where $\mathcal R$ is the pure rotation of Section 1 and $\mathcal E$ is the
 closed-form relaxation of Section 3.3. Its local error is
@@ -536,9 +522,9 @@ gradient requires **no new propagator**: it is a map from position to offset
 applied to the input, and an average over positions applied to the output.
 The existing batched kernel already propagates many offsets in one call.
 
-$$
+```math
 \Delta f(\mathbf r)=\Delta f_0+\bar\gamma\,(\mathbf G\cdot\mathbf r)
-$$
+```
 
 Units follow Section 1.2 without conversion: $\bar\gamma$ in
 $\mathrm{kHz\,mT^{-1}}$, $\mathbf G$ in $\mathrm{mT\,m^{-1}}$, $\mathbf r$ in
@@ -548,9 +534,9 @@ $\Delta f(\mathbf r)$ produces a positive $\Omega_z$ at that position.
 
 The phase accumulated over an interval of constant gradient is
 
-$$
+```math
 \varphi(\mathbf r,t)=2\pi\,\bar\gamma\,(\mathbf G\cdot\mathbf r)\,t .
-$$
+```
 
 ### 8.2 Scope
 
@@ -569,18 +555,18 @@ eddy currents are outside the model.
 
 The observable is the volume average, not any individual isochromat:
 
-$$
+```math
 \bar{\mathbf M}(t)=\frac{1}{V}\int_V \mathbf M(\mathbf r,t)\,d^3r
 \;\approx\;
 \frac{\sum_j w_j\,\mathbf M(\mathbf r_j,t)}{\sum_j w_j}.
-$$
+```
 
 For a one-dimensional slab of thickness $L$ centered at $c$, positions are
 sampled at **cell midpoints**:
 
-$$
+```math
 z_j=c+L\left(\frac{j+\tfrac12}{N}-\frac12\right),\qquad j=0,\dots,N-1 .
-$$
+```
 
 This choice is load-bearing, not cosmetic. Over $k$ complete twists the
 sampled phases are $N$-th roots of unity, so their sum is **identically
@@ -597,19 +583,19 @@ The slab spans the whole range; the samples sit half a cell inside each face.
 With transverse magnetization initially uniform over the slab and a gradient
 $g$ along $z$, the continuum average is
 
-$$
+```math
 \bar M_+(t)=M_+(0)\,\frac{\sin(\pi k)}{\pi k},
 \qquad
 k \equiv \bar\gamma\,g\,L\,t ,
-$$
+```
 
 where $k$ is the number of complete phase twists across the slab. The finite
 midpoint sample has its own exact closed form,
 
-$$
+```math
 \bar M_x = M_x(0)\,\frac{\sin(\pi k)}{N\sin(\pi k/N)},
 \qquad \bar M_y = 0 ,
-$$
+```
 
 which tends to the continuum result as $N$ grows and is real for all $k$.
 Both forms vanish at integer $k$: **one complete winding cancels exactly.**
@@ -762,13 +748,13 @@ angle, not by a label.
 
 ### 9.5 Intent is read from the file
 
-$$
+```math
 \texttt{intent} =
 \begin{cases}
 \texttt{"adiabatic"} & \texttt{SHAPE\_EXMODE} \in \{\texttt{Adiabatic},\ \texttt{CompositeAdiabatic}\}\\
 \texttt{None} & \text{otherwise}
 \end{cases}
-$$
+```
 
 47 of the 203 files declare themselves adiabatic on this rule.
 
@@ -801,7 +787,7 @@ design relations. For `wave/HypSec`:
 |---|---|---|---|
 | `SHL_TRUNCLEV` | 1 % | (input) | — |
 | `SHL_SW` | 20 Hz | (input) | — |
-| `SHL_BETA` | 5.298292365610480 | $\operatorname{arccosh}(100/\text{trunclev})$ | $8.4\times10^{-16}$ |
+| `SHL_BETA` | 5.298292365610480 | $\mathrm{arccosh}(100/\text{trunclev})$ | $8.4\times10^{-16}$ |
 | `SHL_MU` | 5.929443746783140 | $\pi\,\text{SW}/(2\beta)$ | $1.5\times10^{-16}$ |
 
 Agreement is at the last bit of double precision. This is the strongest
