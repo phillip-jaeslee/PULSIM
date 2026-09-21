@@ -28,11 +28,27 @@ class PulseSequence:
     def __getitem__(self, i):
         return self.pulses[i]
 
-    def run(self, M, df):
-        """Apply every pulse in order. Returns the final (3, n_offsets) M."""
-        for pulse in self.pulses:
-            M = pulse.apply(M, df)
-        return M
+    def run(self, M, df, trajectory=False):
+        """Apply every pulse in order.
+
+        Returns the final (3, n_offsets) M, or, with trajectory=True, an
+        (n_steps + 1, 3, n_offsets) array spanning the whole sequence: one
+        frame per RF step, plus the starting frame. Each pulse's own first
+        frame repeats the previous pulse's last, so it is dropped -- the total
+        is len(self.rf) + 1, which is what visualization.py expects against
+        self.time.
+        """
+        if not trajectory:
+            for pulse in self.pulses:
+                M = pulse.apply(M, df)
+            return M
+
+        pieces = []
+        for k, pulse in enumerate(self.pulses):
+            traj = pulse.apply(M, df, trajectory=True)
+            pieces.append(traj if k == 0 else traj[1:])
+            M = traj[-1]
+        return np.concatenate(pieces, axis=0)
 
     @property
     def rf(self):

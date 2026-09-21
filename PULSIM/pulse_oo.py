@@ -97,7 +97,7 @@ class Pulse:
         envelope = self.shape.envelope()
         return envelope / np.abs(envelope).max() * self.b1_max
 
-    def apply(self, M, df):
+    def apply(self, M, df, trajectory=False):
         """
         M  : (3, n_offsets) starting magnetization
         df : (n_offsets,) off-resonance frequencies, kHz
@@ -105,6 +105,7 @@ class Pulse:
         """
         RF = self.calibrated_rf()
         dt = self.shape.dt
+        frames = [np.asarray(M, dtype=float).copy()] if trajectory else None
         for n in range(len(RF)):
             B = np.stack([
                 np.full_like(df, np.real(RF[n])),
@@ -112,4 +113,6 @@ class Pulse:
                 df / self.Gamma,
             ], axis=1)
             M = self.backend.rotate(M, dt, B, self.axis)
-        return M
+            if trajectory:
+                frames.append(np.asarray(M, dtype=float).copy())
+        return np.stack(frames) if trajectory else M
