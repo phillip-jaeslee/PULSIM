@@ -16,6 +16,7 @@ from .parallel import parallel_map
 from .simulate import sim_hard_pulse, sim_import_shaped_pulse, sim_shaped_pulse, sim_own_shaped_pulse
 from .spin_system import SpinSystem
 from .metrics import inversion_fidelity, realized_q, fraction_above
+from .relaxation import Relaxation
 
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "sim_hard_pulse", "sim_import_shaped_pulse", "sim_shaped_pulse", "sim_own_shaped_pulse",
     "SpinSystem",
     "inversion_fidelity", "realized_q", "fraction_above",
+    "Relaxation",
 ]
