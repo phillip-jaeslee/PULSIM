@@ -34,6 +34,7 @@ backend = PULSIM.NumpyBackend(Gamma=GAMMA, T1=900.0, T2=100.0)     # ms
 pulse   = PULSIM.Pulse(shape, flip=np.pi / 2, axis="x", backend=backend)
 
 M = pulse.apply(np.array([[0.0], [0.0], [1.0]]), np.array([0.0]))
+
 ```
 
 For this 2 ms 90 degree pulse, `|Mxy|` comes out 0.9874 instead of 1.0000: about
@@ -52,6 +53,29 @@ For this 2 ms 90 degree pulse, `|Mxy|` comes out 0.9874 instead of 1.0000: about
   splitting's convergence.
 * `TorchBackend` does **not** implement relaxation. Passing `T1` or `T2` to it
   raises `NotImplementedError` rather than discarding them silently.
+
+Relaxation is available on the density-matrix side too, through a `Relaxation`
+object rather than the backend:
+
+```python
+seq = PULSIM.LiouvilleSequence(segments, spin_system,
+                               relaxation=PULSIM.Relaxation(T1=500.0, T2=60.0))
+```
+
+* `T1`, `T2` are in **ms**, one value for every spin or one per spin. `None`
+  means infinite. With no `Relaxation` attached, propagation is bit for bit
+  what it was before relaxation existed.
+* Each product operator decays at a rate built from its factors — 1/T2 per
+  transverse factor, 1/T1 per longitudinal one — so `Ix` relaxes at 1/T2 and
+  `2IzSy` at 1/T1(I) + 1/T2(S). Longitudinal terms return to `sum_i M0_i Iz_i`.
+* `max_step` (default 0.05 ms) subdivides long propagation steps. This is not
+  optional detail: relaxation and coherent evolution do **not** commute once
+  spins are coupled, because evolution moves amplitude between operators of
+  different rate. A 30 ms `Delay` at J = 140 Hz taken in one step is wrong by
+  ~9e-3. Equal `T1` and `T2` does not help — the two-spin rate is a sum either
+  way.
+* No relaxation superoperator, so no cross-relaxation and no NOE: rates are
+  attached to operators, not derived from a mechanism.
 
 Equations, sign conventions and the full list of validation requirements are in
 [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §3.

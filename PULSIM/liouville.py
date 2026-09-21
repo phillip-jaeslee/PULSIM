@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import warnings
 from .spin_operators import *
+from .relaxation import Relaxation
 from scipy.linalg import expm
 
 _AXIS_PHASE = {"x": 0.0, "y": np.pi / 2, "-x": np.pi, "-y": -np.pi / 2}
@@ -143,9 +144,10 @@ class ShapePulseSegment(Segment):
 class LiouvilleSequence:
     """An ordered list of Segments, propagated in Liouville space."""
 
-    def __init__(self, segments, spin_system):
+    def __init__(self, segments, spin_system, relaxation=None):
         self.segments = segments
         self.spin_system = spin_system
+        self.relaxation = relaxation
         self._warn_unchanneled_ideal_pulses()
 
     def _warn_unchanneled_ideal_pulses(self):
@@ -166,11 +168,31 @@ class LiouvilleSequence:
             )
 
     def propagate(self, sigma0):
+        """Propagate sigma0 through every segment in order."""
+        relax = self.relaxation
         sigma = sigma0
+        if relax is None or relax.is_identity():
+            for segment in self.segments:
+                for H, dt in segment.hamiltonians(self.spin_system):
+                    U = expm(-1j * H * dt)
+                    sigma = U @ sigma @ U.conj().T
+            return sigma
+        n_spins = self.spin_system.n_spins
         for segment in self.segments:
             for H, dt in segment.hamiltonians(self.spin_system):
-                U = expm(-1j * H * dt)
-                sigma = U @ sigma @ U.conj().T
+                # Relaxation and coherent evolution do not commute once spins
+                # are coupled, so a long step (a Delay is a single step however
+                # long it is) must be subdivided. H is constant across the
+                # substeps, so it is exponentiated once.
+                n_sub = 1 if relax.max_step is None else max(1, int(np.ceil(dt / relax.max_step)))
+                sub = dt / n_sub
+                U = expm(-1j * H * sub)
+                half = 0.5 * sub
+                for _ in range(n_sub):
+                    sigma = relax.apply(sigma, half, n_spins)
+                    sigma = U @ sigma @ U.conj().T
+                    sigma = relax.apply(sigma, half, n_spins)
+
         return sigma
 
 class RawShapedPulseSegment(Segment):
