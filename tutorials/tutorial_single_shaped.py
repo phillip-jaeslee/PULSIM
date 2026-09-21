@@ -41,7 +41,7 @@ from PULSIM.backend import NumpyBackend
 
 PI, twoPI = np.pi, 2 * np.pi
 
-J_HZ = 92.0                         # real 1J(NH)
+J_HZ = 140.0                         # real 1J(NH)
 tp_ms = 1                           # shaped pulse length, ms
 N = 64                              # number of offsets to sweep
 W_hz = np.linspace(-1, 1, N) * 4000.0
@@ -51,7 +51,7 @@ GAMMA_C = gyro_ratio('13C')
 GAMMA_N = gyro_ratio('15N')
 
 # -- Apply 90˚ GaussCascadeQ5 pulse ------------------
-shape = RFShape.create("gausscasq5", duration=tp_ms, points=500)
+shape = RFShape.create("eburp1", duration=tp_ms, points=500)
 pulse = Pulse(shape, PI / 2, axis = "x", backend=NumpyBackend(Gamma=GAMMA_H))
 seg = ShapePulseSegment(pulse)
 
@@ -82,7 +82,7 @@ fig.set_size_inches(11, 4.5, forward=True)
 ax[0].axhline(y=0, color='lightgray', linestyle='-')
 for k, color in zip(keys, ['red', 'blue', 'green', 'orange', 'cyan', 'olive']):
     ax[0].plot(W_hz, with_J[k], '-', color=color, label=k)
-ax[0].set_title(f'Single 90x GaussCascadeQ5, WITH J={J_HZ:.0f} Hz')
+ax[0].set_title(f'Single 90x EBURP1, WITH J={J_HZ:.0f} Hz')
 ax[0].set_xlabel('offset (Hz)')
 ax[0].legend(fontsize=9)
 ax[0].invert_xaxis()
@@ -94,7 +94,7 @@ ax[1].set_title('Same pulse, J = 0 (idealized, coupling-free)')
 ax[1].set_xlabel('offset (Hz)')
 ax[1].legend(fontsize=9)
 
-plt.savefig("tutorial_figures/tutorial_single_shaped.png")
+plt.savefig("tutorial_figures/tutorial_single_shaped_EBURP1.png")
 plt.show()
 
 print(f"On-resonance: with J, IxSz={with_J['IxSz'][N//2]:.4f}; "

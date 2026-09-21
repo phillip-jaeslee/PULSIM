@@ -28,16 +28,18 @@ import matplotlib.pyplot as plt
 
 from PULSIM.spin_operators import Ix, Iy, Iz, embed, product_operator
 from PULSIM.spin_system import SpinSystem, gyro_ratio
-from PULSIM.liouville import Delay, IdealPulse, RawShapedPulseSegment, LiouvilleSequence
+from PULSIM.liouville import Delay, IdealPulse, RawShapedPulseSegment, LiouvilleSequence, ShapePulseSegment
+from PULSIM.pulse_oo import Pulse
+from PULSIM.backend import NumpyBackend
 from PULSIM.rf_shape import RFShape
 from PULSIM.sequence_figure import draw_sequence
 
 PI = np.pi
-J_HZ = 92          # real Hz, ~1J(NH)
+J_HZ = 140          # real Hz, ~1J(NH)
 duration = 1.5     # ms
 
 GAMMA_H = gyro_ratio('H')
-GAMMA_N = gyro_ratio('15N')
+GAMMA_C = gyro_ratio('13C')
 rfPow = 2 * PI * 2730.78242 / 1000.0   # real hardware peak power, rad/ms
                                         # (2730.78242 Hz -> rad/s -> rad/ms;
                                         # see tutorial_HN_shaped_refocusing.py)
@@ -60,19 +62,24 @@ def build_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     built from the same object -- the diagram is drawn by walking these
     segments, so it cannot describe a sequence other than the one that ran.
     """
-    ss = SpinSystem(nuclei=['H', '15N'], offsets=[off_I, off_S], couplings={(0, 1): J_HZ})
+    ss = SpinSystem(nuclei=['H', '13C'], offsets=[off_I, off_S], couplings={(0, 1): J_HZ})
 
     rf1, dt1 = hardware_rf('wave/eb2try_1.5m_ofs0Hz.500')
     rf2, dt2 = hardware_rf('wave/eb2x_1.5m_ofs0Hz.500')
 
-    segments = [RawShapedPulseSegment(rf1, dt1, channel='H')]
+    #segments = [RawShapedPulseSegment(rf1, dt1, channel='H')]
+    shape = RFShape.create("eburp1", duration=duration, points=1000)
+    p90_H_x = Pulse(shape, PI / 2, axis="x", backend=NumpyBackend(Gamma=GAMMA_H))
+    segments = [ShapePulseSegment(p90_H_x)]
     segments.append(Delay(Delta))
     if refocus:
         segments.append(IdealPulse(PI, phase=0.0, channel='H'))
-        segments.append(IdealPulse(PI, phase=0.0, channel='15N'))
+        segments.append(IdealPulse(PI, phase=0.0, channel='13C'))
     segments.append(Delay(Delta))
-    segments.append(RawShapedPulseSegment(rf2, dt2, channel='H'))
-    segments.append(IdealPulse(PI / 2, phase=0.0, channel='15N'))
+    #segments.append(RawShapedPulseSegment(rf2, dt2, channel='H'))
+    p90_H_y = Pulse(shape, PI / 2, axis="y", backend=NumpyBackend(Gamma=GAMMA_H))
+    segments.append(ShapePulseSegment(p90_H_y))
+    segments.append(IdealPulse(PI / 2, phase=0.0, channel='13C'))
 
     return LiouvilleSequence(segments, ss)
 
@@ -99,7 +106,7 @@ axs[0].set_ylabel(r"antiphase S amplitude ($2 I_z(I) I_y(S)$)")
 axs[0].set_title(f"INEPT transfer efficiency vs delay (J = {J_HZ:.0f} Hz)")
 axs[0].legend()
 
-draw_sequence(build_inept(Delta_opt), ax=axs[1], to_scale=True,
+draw_sequence(build_inept(Delta_opt), ax=axs[1], to_scale=False,
               title=f"shaped INEPT, to scale  ($\\Delta$ = {Delta_opt:.2f} ms, "
                     f"1.5 ms shaped pulses)")
 plt.tight_layout()

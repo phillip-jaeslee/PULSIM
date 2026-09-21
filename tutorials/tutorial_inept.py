@@ -29,13 +29,14 @@ import matplotlib.pyplot as plt
 from PULSIM.spin_operators import Ix, Iy, Iz, embed, product_operator, SpinOperators
 from PULSIM.spin_system import SpinSystem, gyro_ratio
 from PULSIM.liouville import Delay, IdealPulse, LiouvilleSequence
+from PULSIM.sequence_figure import draw_sequence
 
 PI = np.pi
 J_HZ = 140.0    # real Hz, ~1J(CH)
 
 ss_template_offsets = [0.0, 0.0]
 
-def run_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
+def build_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     """Propagate equilibrium Iz(I) through the INEPT sequence, return the
     final density matrix."""
     ss = SpinSystem(nuclei=['H', '13C'], offsets=[off_I, off_S], couplings={(0, 1): J_HZ})
@@ -48,61 +49,21 @@ def run_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     segments.append(IdealPulse(PI / 2, phase=PI / 2, channel='H'))
     segments.append(IdealPulse(PI / 2, phase=0.0, channel='13C'))
 
-    seq = LiouvilleSequence(segments, ss)
-    sigma0 = embed(Iz(), 0, 2)
+    return LiouvilleSequence(segments, ss)
+
+def run_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
+    ss = SpinSystem(nuclei=['H', '13C'], offsets=[off_I, off_S], couplings={(0, 1): J_HZ})
+
+    sigma_final = build_inept(Delta, off_I, off_S, refocus).propagate(embed(Iz(), 0, 2))
     ops = SpinOperators(spin_system=ss)
 
-    return ops.readout(seq.propagate(sigma0), ['IzSy'])['IzSy']
+    return ops.readout(sigma_final, ['IzSy'])['IzSy']
 
 def antiphase_S_amplitude(sigma):
     """Coefficient of 2*Iz(I)*Iy(S) -- the antiphase S-spin coherence
     INEPT delivers, via the trace formula <A> = Tr(sigma A) / Tr(A A)."""
     A = product_operator(Iz(), 0, Iy(), 1, 2)
     return np.trace(sigma @ A).real / np.trace(A @ A).real
-
-def draw_pulse_sequence(ax):
-    """Standard NMR pulse-sequence diagram: two horizontal timelines (I, S),
-    pulses drawn as vertical bars (thin/open = 90 deg, thick/filled = 180
-    deg), delays labeled Delta. Schematic -- not to a real time scale,
-    matching how these are normally drawn in papers and textbooks."""
-    y_I, y_S = 1.0, 0.0
-    lw_thin, lw_thick = 0.15, 0.35
-
-    ax.plot([0, 10], [y_I, y_I], color='black', lw=1)
-    ax.plot([0, 10], [y_S, y_S], color='black', lw=1)
-    ax.text(-0.6, y_I, r'$^1$H (I)', va='center', ha='right', fontsize=11)
-    ax.text(-0.6, y_S, r'$^{13}$C (S)', va='center', ha='right', fontsize=11)
-
-    def pulse(x, y, width, filled, label):
-        height = 0.4
-        rect = plt.Rectangle((x - width / 2, y - height / 2), width, height,
-                              facecolor='black' if filled else 'white',
-                              edgecolor='black', lw=1.2, zorder=3)
-        ax.add_patch(rect)
-        ax.text(x, y + height / 2 + 0.15, label, ha='center', va='bottom', fontsize=10)
-
-    def delay_bracket(x_start, x_end, y, label):
-        ax.annotate('', xy=(x_end, y), xytext=(x_start, y),
-                    arrowprops=dict(arrowstyle='<->', color='gray'))
-        ax.text((x_start + x_end) / 2, y + 0.1, label, ha='center', va='bottom',
-                 fontsize=10, color='gray')
-
-    x0, x1, x2 = 1.0, 4.5, 8.0   # schematic event times
-
-    pulse(x0, y_I, lw_thin, False, r'$90_x$')
-    pulse(x1, y_I, lw_thick, True, r'$180_x$')
-    pulse(x2, y_I, lw_thin, False, r'$90_y$')
-
-    pulse(x1, y_S, lw_thick, True, r'$180_x$')
-    pulse(x2, y_S, lw_thin, False, r'$90_x$')
-
-    delay_bracket(x0, x1, -0.55, r'$\Delta$')
-    delay_bracket(x1, x2, -0.55, r'$\Delta$')
-
-    ax.set_xlim(-1.5, 10.5)
-    ax.set_ylim(-1.0, 1.7)
-    ax.axis('off')
-    ax.set_title('INEPT pulse sequence (schematic, not to scale)')
 
 # -- transfer efficiency vs Delta ----------------------
 Delta_opt = 1.0 / (4 * J_HZ / 1000.0) # ms
@@ -119,10 +80,11 @@ axs[0].set_ylabel(r"antiphase S amplitude ($2 I_z(I) I_y(S)$)")
 axs[0].set_title(f"INEPT transfer efficiency vs delay (J = {J_HZ:.0f} Hz)")
 axs[0].legend()
 
-draw_pulse_sequence(axs[1])
-
-plt.savefig("tutorial_figures/tutorial_inept.png")
+draw_sequence(build_inept(Delta_opt), ax=axs[1], to_scale=False,
+              title=f"ideal INEPT, to scale  ($\\Delta$ = {Delta_opt:.2f} ms, "
+                    f"1.5 ms shaped pulses)")
 plt.tight_layout()
+plt.savefig("tutorial_figures/tutorial_inept.png")
 plt.show()
 
 print("Transfer amplitude at Delta_opt (on-resonance, refocused):",
