@@ -1,7 +1,6 @@
 *.pyc
 __pycache__/
 wave/
-*.jhl
 *.jfy
 *.gif
 *.svg
