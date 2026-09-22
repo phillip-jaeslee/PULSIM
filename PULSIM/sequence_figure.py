@@ -100,6 +100,29 @@ def _group_simultaneous(items):
 
     return out
 
+def _attach_to_shaped(items):
+    """Attach an ideal pulse to an adjacent shaped pulse on other channels.
+
+    An ideal pulse has zero duration, so one sitting immediately beside a
+    shaped pulse on a different channel happens AT that pulse's edge, not in
+    a time slot of its own. Giving it its own slot draws a lie: it pushes the
+    two apart on the time axis and says they are sequential events. Attached,
+    it is drawn on the shaped pulse's edge, where the propagator applies it.
+    """
+    out = []
+    for it in items:
+        if it["kind"] == "ideal" and out and out[-1]["kind"] == "shaped" \
+                and not (set(it["channels"]) & set(out[-1]["channels"])) \
+                and not out[-1].get("attached"):
+            out[-1] = dict(out[-1], attached=it["pulses"], attach_at="end")
+            continue
+        if it["kind"] == "shaped" and out and out[-1]["kind"] == "ideal" \
+                and not (set(it["channels"]) & set(out[-1]["channels"])):
+            out.append(dict(it, attached=out.pop()["pulses"], attach_at="start"))
+            continue
+        out.append(it)
+    return out
+
 def _layout(items, to_scale, min_pulse_frac):
     """Assign each item an x position and a drawn width"""
     if to_scale:
@@ -127,12 +150,34 @@ def _layout(items, to_scale, min_pulse_frac):
 
     return positions, x, faked
 
+H90, H180 = 0.52, 0.52   # bar heights: equal, because both pulses run at the
+                         # same RF amplitude -- what differs is duration, and
+                         # the widths below already say that
+W90, W180 = 0.55, 1.0    # bar widths, as a fraction of the slot
+
+_LABEL_DY = 0.38   # one label height for every element, so labels on a
+                   # channel line up instead of stepping with bar height
+
+def _draw_ideal_pulse(ax, xc, w_slot, sub, y, annotate):
+    """Draw one ideal pulse centred on xc. Shared by the slot-drawn pulses
+    and the ones attached to a shaped pulse, so both look identical."""
+    is180 = abs(sub["flip"] - np.pi) < 1e-6
+    h = H180 if is180 else H90
+    ww = w_slot * (W180 if is180 else W90)
+    ax.add_patch(Rectangle((xc - ww / 2, y - h / 2), ww, h,
+                           facecolor="0.15" if is180 else "white",
+                           edgecolor="0.15", lw=1.1, zorder=3))
+    if annotate:
+        ax.text(xc, y + _LABEL_DY,
+                f"{np.degrees(sub['flip']):.0f}$^\\circ_{{{_phase_label(sub['phase'])}}}$",
+                ha="center", va="bottom", fontsize=9)
+
 def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0.012, annotate=True):
     """Draw `sequence` (a LiouvilleSequence) as a pulse-sequence diagram.
  
     Returns the matplotlib Axes.
     """
-    items = _group_simultaneous(describe_sequence(sequence))
+    items = _attach_to_shaped(_group_simultaneous(describe_sequence(sequence)))
     ss = sequence.spin_system
     n = ss.n_spins
     positions, total, faked = _layout(items, to_scale, min_pulse_frac)
@@ -144,10 +189,7 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
     for i, y in enumerate(ys):
         ax.plot([0, total], [y, y], color="0.25", lw=1.0, zorder=1)
         ax.text(-0.015 * total, y, ss.nuclei[i], ha="right", va="center", fontsize=11)
- 
-    H90, H180 = 0.34, 0.52
-    W90, W180 = 0.55, 1.0
- 
+  
     for it, (x0, w) in zip(items, positions):
         if it["kind"] == "delay":
             if annotate and it["duration"] > 0:
@@ -159,14 +201,8 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
  
         if it["kind"] == "ideal":
             for sub in it["pulses"]:
-                is180 = abs(sub["flip"] - np.pi) < 1e-6
-                h = H180 if is180 else H90
-                ww = w * (W180 if is180 else W90)
                 for ci in sub["channels"]:
-                    y = ys[ci]
-                    ax.add_patch(Rectangle((x0 + (w - ww) / 2, y - h / 2), ww, h, facecolor="0.15" if is180 else "white", edgecolor="0.15", lw=1.1, zorder=3))
-                    if annotate:
-                        ax.text(x0 + w / 2, y + h / 2 + 0.10, f"{np.degrees(sub['flip']):.0f}$^\\circ_{{{_phase_label(sub['phase'])}}}$", ha="center", va="bottom", fontsize=9)
+                    _draw_ideal_pulse(ax, x0 + w / 2, w, sub, ys[ci], annotate)
             continue
  
         for ci in it["channels"]:
@@ -184,11 +220,23 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
                 if annotate:
                     name = it.get("name") or "shaped"
                     lab = name if it["flip"] is None else f"{name}  {np.degrees(it['flip']):.0f}$^\\circ$"
-                    ax.text(x0 + w / 2, y + 0.5 * H180 + 0.12, lab,
+                    ax.text(x0 + w / 2, y + _LABEL_DY, lab,
                             ha="center", va="bottom", fontsize=9)
- 
+
+        for sub in it.get("attached") or ():
+            xc = x0 + w if it.get("attach_at") == "end" else x0
+            for ci in sub["channels"]:
+                _draw_ideal_pulse(ax, xc, min_pulse_frac * total if to_scale else 0.7,
+                                  sub, ys[ci], annotate)
+                
+    # An attached ideal pulse is centred ON the shaped pulse's edge, so half
+    # of it lies past the end of the sequence -- the axis has to make room or
+    # the last pulse is drawn cut in half.
+    tail = any(it.get("attached") and it.get("attach_at") == "end" for it in items)
+    edge = 0.5 * (min_pulse_frac * total if to_scale else 0.7) if tail else 0.0
+
     ax.set_ylim(min(ys) - 1.0, max(ys) + 0.95)
-    ax.set_xlim(-0.10 * total, total * 1.02)
+    ax.set_xlim(-0.10 * total, total * 1.02 + edge)
     ax.set_yticks([])
     for s in ("top", "right", "left"):
         ax.spines[s].set_visible(False)
@@ -201,7 +249,7 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
         ax.spines["bottom"].set_visible(False)
  
     if title:
-        ax.set_title(title, fontsize=11, loc="left")
+        ax.set_title(title, fontsize=11)
  
     if to_scale and faked:
         ax.text(total, min(ys) - 0.95,
