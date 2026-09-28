@@ -912,32 +912,25 @@ class HyperbolicSecant(AnalyticShape):
         return AdiabaticCalibration(q_mid=self.q_mid, mu=mu, beta=beta, half_width=1.0, convention="bruker_hs_full")
 
     def _build(self):
-        truncate = float(self.params.get("truncation_percent", self.default_truncation_percent))
+        truncation = float(self.params.get("truncation_percent", self.default_truncation_percent)) / 100
         beta, mu = self._design()
         low_to_high = self.params.get('low_to_high', True)
 
-        t_original = np.linspace(-3, 3, 10_000)
-        truncate /= 100
-        if low_to_high == False:
-            amp_original = (np.cosh(beta * t_original))**(1 + 1j * mu)  # Complex amplitude
-        elif low_to_high == True:
-            amp_original = (np.cosh(beta * t_original))**(-1 - 1j * mu)
+        # Truncation point solved exactly: sech(beta * t_end) = truncation.
+        # The old code searched a grid for |amp| > truncation, but with beta
+        # derived from the truncation the threshold falls exactly ON a grid
+        # point (t = +/-1), so whether the end samples survived depended on
+        # the last bit of cosh -- x86 and ARM built pulses 0.06% apart.
+        # The 3.0 cap is the old search range, kept for a large beta override.
+        t_end = min(np.arccosh(1.0 / truncation) / beta, 3.0)
+        t = np.linspace(-t_end, t_end, self.points)
 
-        real = np.real(amp_original)
-        imag = np.imag(amp_original)
-        amplitude = np.hypot(real, imag)
-        mask = abs(amplitude) > truncate
-        t_start = t_original[mask][0]
-        t_end = t_original[mask][-1]
-
-        t = np.linspace(t_start, t_end, self.points)
-        if low_to_high == False:
-            amp = (np.cosh(beta * t))**(1 + 1j * mu)  # Complex amplitude
-        elif low_to_high == True:
-            amp = (np.cosh(beta * t))**(-1 - 1j * mu)
-        amp = amp / np.max(np.abs(amp))
-
-        return amp
+        # sech amplitude either way; reversing the sweep conjugates the phase.
+        # (The old low_to_high=False branch used cosh**(1+1j*mu), which is a
+        # cosh amplitude -- zero in the middle, peak at the edges.)
+        exponent = (-1 - 1j * mu) if low_to_high else (-1 + 1j * mu)
+        amp = np.cosh(beta * t) ** exponent
+        return amp / np.max(np.abs(amp))
     
 
         
