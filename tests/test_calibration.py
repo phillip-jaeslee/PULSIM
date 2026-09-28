@@ -111,10 +111,11 @@ def test_inversion_is_duration_invariant_at_fixed_q(duration):
 def test_nu1_over_sqrt_q_is_q_independent():
     """Bruker's integradia reports this quantity precisely because it does not
     depend on Q."""
-    a = _hypsec_calibration(2.0).nu1_over_sqrt_q(2.0)    
+    a = _hypsec_calibration(2.0).nu1_over_sqrt_q(2.0)
     b = _hypsec_calibration(9.0).nu1_over_sqrt_q(2.0)
     assert a == pytest.approx(b, rel=1e-15)
-
+    assert a * np.sqrt(2.0) == pytest.approx(_hypsec_calibration(2.0).nu1_for(2.0))
+    
 def phase_modulated_shapes():
     names = []
     for name in sorted(PULSIM.RFShape.available()):

@@ -73,8 +73,8 @@ class AdiabaticCalibration:
 
         nu1_max = (a*beta/(pi*T)) * sqrt(mu*Q)        [kHz, T in ms]
 
-    Note nu1_max/sqrt(Q) = a*beta/(pi*T) is independent of Q -- which is why
-    Bruker's integradia reports gamma*B1max/2pi/sqrt(Q) rather than
+    Note nu1_max/sqrt(Q) = a*beta*sqrt(mu)/(pi*T) is independent of Q -- which
+    is why Bruker's integradia reports gamma*B1max/2pi/sqrt(Q) rather than
     gamma*B1max/2pi.
 
     FULL PASSAGE ONLY. For a half passage the resonance crossing sits at the
@@ -93,9 +93,8 @@ class AdiabaticCalibration:
         return (self.half_width * self.beta / (np.pi * duration_ms)) * np.sqrt(self.mu * self.q_mid)
 
     def nu1_over_sqrt_q(self, duration_ms):
-        """Bruker integradia's Q-independent output."""
-        return self.half_width * self.beta / (np.pi * duration_ms)
-
+        """nu1_max / sqrt(Q), kHz -- independent of Q."""
+        return self.half_width * self.beta * np.sqrt(self.mu) / (np.pi * duration_ms)
     def q_for(self, nu1_max, duration_ms):
         """The adiabaticity actually achieved at a given RF amplitude.
 
@@ -105,4 +104,76 @@ class AdiabaticCalibration:
         """
         root = nu1_max * np.pi * duration_ms / (self.half_width * self.beta)
         return float(root * root / self.mu)
-    
+
+@dataclass(frozen=True)
+class ResonanceCrossing:
+    """Where an adiabatic sweep passes through resonance, in normalized time.
+    u           : crossing position, u = t/T in [0, 1]
+    rate_norm   : |d(delta_omega)/du| there, rad per unit u^2. The physical
+                  sweep rate is rate_norm / T^2 in rad/ms^2 (T in ms).
+    amp_rel     : RF amplitude at the crossing relative to the peak, 0...1
+    at_edge     : True for a half passage, which ends on resonance
+    """
+
+    u: float
+    rate_norm: float
+    amp_rel: float
+    at_edge: bool
+
+def resonance_crossing(envelope, window=0.01, amp_floor=1e-3, edge_tol=0.01):
+    """Locate the resonance crossing of a frequency-swept envelope.
+
+    Measured from the waveform itself, so it works for any adiabatic family
+    without a per-family sweep-rate formula. The instantaneous offset is the 
+    phase step between neighboring samples (wrap-safe), kept only where the
+    amplitude is above amp_floor -- the phase is undefined at a zero edge.
+
+    Full passage: the offset changes exactly once, inside the pulse.
+    Half passage: no sign change, and the offset extrapolates to zero at one
+    end. Anything else (no crossing, or several, as in a composite chirp) has
+    no single Q, and this raises rather than picking one.
+
+    The slope cames from a cubic fit centered on the crossing -- its linear
+    coefficient is the slopt AT u_c. A straight line would average over the
+    tanh-like bend of a HypSec sweep and read 0.2% low.
+    """
+    env = np.asarray(envelope, dtype=complex)
+    n = len(env)
+    amp = np.abs(env)
+    peak = amp.max()
+
+    step = np.angle(env[1:] * np.conj(env[:-1]))        # rad per sample
+    offset = step * (n - 1)                             # rad per unit u
+    u_mid = (np.arange(n - 1) + 0.5) / (n - 1)          # where each step sits
+    keep = np.minimum(amp[1:], amp[:-1]) > amp_floor * peak
+    offset, u_mid = offset[keep], u_mid[keep]
+
+    flips = np.flatnonzero(np.diff(np.sign(offset)) != 0)
+    sweep = np.abs(offset).max()
+    half_win = max(4, int(window * n))
+
+    if len(flips) == 1:
+        k = flips[0]
+        f0, f1 = offset[k], offset[k + 1]       # bracket the zero
+        u_c = u_mid[k] + (u_mid[k + 1] - u_mid[k]) * f0 / (f0 - f1)
+        sel = slice(max(0, k - half_win), k + half_win + 2)
+        at_edge = False
+    elif len(flips) == 0:
+        at_start = abs(offset[0]) < abs(offset[-1])
+        u_c = 0.0 if at_start else 1.0
+        sel = slice(0, 2 * half_win) if at_start else slice(-2 * half_win, None)
+        at_edge = True
+    else:
+        raise ValueError(
+            f"found {len(flips)} resonance crossing; this waveform has no single Q. Supply nu1_max explicitly."
+        )
+    coeffs = np.polyfit(u_mid[sel] - u_c, offset[sel], 3)
+    if at_edge and abs(coeffs[-1]) > edge_tol * sweep:
+        raise ValueError(
+            "the sweep never reaches resonance (no sign change, and neither "
+            "end extrapolates to zero offset); no Q can be defined. "
+            "Supply nu1_max explicitly."
+        )
+
+    amp_rel = float(np.interp(u_c, np.linspace(0.0, 1.0, n), amp) / peak)
+    return ResonanceCrossing(u=float(u_c), rate_norm=float(abs(coeffs[-2])), amp_rel=amp_rel, at_edge=at_edge)
