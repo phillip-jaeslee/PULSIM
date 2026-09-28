@@ -1009,7 +1009,7 @@ class Wurst(AnalyticShape):
         amp = amp * self.amplitude
 
         offset_hz = -sweep_width * x * sweep_dir          # +SW/2 -> -SW/2
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
 
         return amp * np.exp(1j * phase)
 
@@ -1041,7 +1041,7 @@ class SmoothedChirp(AnalyticShape):
         amp = amp * self.amplitude
 
         offset_hz = sweep_width * (0.5 - x) * sweep_dir    # +SW/2 -> -SW/2
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
 
         return amp * np.exp(1j * phase)
 
@@ -1085,7 +1085,7 @@ class CompositeSmoothedChirp(AnalyticShape):
 
             offset_hz = sweep_width * (0.5 - x) * sweep_dir
             seg_dt = element_duration / npts
-            phase = 2 * np.pi * np.cumsum(offset_hz) * seg_dt
+            phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * seg_dt
             phase = phase + (np.pi if (seg % 2 == 1) else 0.0)  # alternate 180 deg
 
             env[idx:idx + npts] = amp * np.exp(1j * phase)
@@ -1117,7 +1117,7 @@ class TanhTan(AnalyticShape):
 
         kappa = np.arctan(tan_kappa)
         offset_hz = (sweep_width / 2.0) * np.tan(kappa * x) / tan_kappa
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
 
         return amp * np.exp(1j * phase)
 
@@ -1160,7 +1160,7 @@ class CaWurst(AnalyticShape):
         amp = amp_norm * self.amplitude
 
         offset_hz = _ca_offset_from_amplitude(amp_norm, sweep_width, sweep_dir)
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
         return amp * np.exp(1j * phase)
 
 
@@ -1188,7 +1188,7 @@ class CaSmoothedChirp(AnalyticShape):
         amp = amp_norm * self.amplitude
 
         offset_hz = _ca_offset_from_amplitude(amp_norm, sweep_width, sweep_dir)
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
         return amp * np.exp(1j * phase)
 
 
@@ -1213,7 +1213,7 @@ class CaGauss(AnalyticShape):
         amp = amp_norm * self.amplitude
 
         offset_hz = _ca_offset_from_amplitude(amp_norm, sweep_width, sweep_dir)
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
         return amp * np.exp(1j * phase)
 
 
@@ -1238,7 +1238,7 @@ class CaLorentz(AnalyticShape):
         amp = amp_norm * self.amplitude
 
         offset_hz = _ca_offset_from_amplitude(amp_norm, sweep_width, sweep_dir)
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
         return amp * np.exp(1j * phase)
 
 
@@ -1265,7 +1265,7 @@ class CaPowHsec(AnalyticShape):
         amp = amp_norm * self.amplitude
 
         offset_hz = _ca_offset_from_amplitude(amp_norm, sweep_width, sweep_dir)
-        phase = 2 * np.pi * np.cumsum(offset_hz) * self.dt
+        phase = 2 * np.pi * np.cumsum(offset_hz / 1000) * self.dt
         return amp * np.exp(1j * phase)
 
 
