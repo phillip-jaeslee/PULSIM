@@ -177,3 +177,41 @@ def resonance_crossing(envelope, window=0.01, amp_floor=1e-3, edge_tol=0.01):
 
     amp_rel = float(np.interp(u_c, np.linspace(0.0, 1.0, n), amp) / peak)
     return ResonanceCrossing(u=float(u_c), rate_norm=float(abs(coeffs[-2])), amp_rel=amp_rel, at_edge=at_edge)
+
+@dataclass(frozen=True)
+class NumericAdiabaticCalibration:
+    """Adiabatic calibration for any single-sweep shape, from its waveform
+
+    Same definition of Q as AdiabaticCalibration, evaluated where the sweep crosses resonance:
+
+        Q = omega1(t_c)^2 / |d(delta_omega)/dt|(t_c)
+          = (2*pi * nu1_max * amp_rel * T)^2 / rate_norm
+    
+    so nu1_max = sqrt(Q * rate_norm) / (2*pi * amp_rel * T) [kHz, T in ms]
+
+    rate_norm and amp_rel come frm resonance_crossing(), so no per-family
+    sweep-rate formula is needed. For HypSec this reproduces the closed form
+    in AdiabaticCalibration; the tests hold it to that.
+    """
+    q_mid: float
+    crossing: ResonanceCrossing
+
+    @classmethod
+    def from_envelope(cls, envelope, q_mid):
+        return cls(q_mid=float(q_mid), crossing=resonance_crossing(envelope))
+
+    def nu1_over_sqrt_q(self, duration_ms):
+        """Peak nutation frequency per sqrt(Q), kHz -- Q-independent."""
+        c = self.crossing
+        return np.sqrt(c.rate_norm) / (2 * np.pi * c.amp_rel * duration_ms)
+
+    def nu1_for(self, duration_ms):
+        """Peak nutation frequency in kHz."""
+        return self.nu1_over_sqrt_q(duration_ms) * np.sqrt(self.q_mid)
+
+    def q_for(self, nu1_max, duration_ms):
+        """The adiabaticity actually achieved at a given RF amplitude.
+
+        Inverse of nu1_for. Diagnostic only -- never an input to propagation.
+        """
+        return float((nu1_max / self.nu1_over_sqrt_q(duration_ms)) ** 2)
