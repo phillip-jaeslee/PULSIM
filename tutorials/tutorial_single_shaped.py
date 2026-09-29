@@ -1,31 +1,16 @@
 """
-tutorial_single_shaped.py -- the shaped-pulse refocusing element
-from the 2nd INEPT of Rance-Kay sensitivity-enhanced detection, ported
-from this lab's densityMatSim/dmSimIySz_Ix_EB2try_1ov2J_EB2x_rfshape.py
-onto PULSIM.liouville's SpinSystem/Segment classes.
+tutorial_single_shaped.py -- what J-coupling does DURING a single shaped
+pulse.
 
-Sequence (I = 1H, S = 15N, J = 92 Hz = real 1J(NH)):
-
-    sigma0  --EBURP2tr(I)-->  --delay,1/(4J)-->  --180x(I),180x(S)-->  --delay,1/(4J)-->  --EBURP2(I)-->
-
-Same spin-echo mechanism as tutorial_inept.py's idealized hard-pulse
-INEPT, but here the pulses (EBURP2tr going in, time-reversed EBURP2
-coming out) are real band-selective shapes loaded from this lab's own
-wave files, and the whole thing is swept across resonance offset (not
-delay) to see how transfer fidelity holds up across the shape's
-bandwidth -- i.e. this is the "realistic, finite-bandwidth pulse"
-companion to the idealized tutorial.
-
-RF is specified as a fixed real hardware peak power (2730.78 Hz nutation)
-rather than "calibrated to a flip angle", so the shaped-pulse segments use
-RawShapedPulseSegment (which takes an already-scaled RF trajectory
-directly) instead of ShapePulseSegment (which calibrates via a target
-flip angle -- not the right fit for a fixed-power specification, see
-RawShapedPulseSegment's docstring in liouville.py).
-
-Verified against the original dmSim script's xyzBasis + scipy.linalg.expm
-computation before this file was written: matches to ~1.5e-9 across
-sampled offsets, for both starting states shown below.
+A single 90x EBURP1 (1 ms) acts on a 1H-15N pair starting from Iz(H), swept
+across resonance offset, twice: with the heteronuclear coupling on
+(J = 92 Hz, a real 1J(NH)) and with it off (J = 0). With J = 0 the pulse only
+rotates Iz into transverse Ix/Iy. With J on, the coupling keeps evolving for
+the whole millisecond the pulse lasts, so part of the transverse I
+magnetization turns into antiphase IxSz/IySz -- a term a hard pulse would
+never create. Here it reaches about 6 % (IySz). The same J evolution during
+the pulse is what shifts the optimal INEPT delay for finite shaped pulses
+(see tutorial_delay_optimization.py and tutorial_inept_shaped.py).
 """
 
 import numpy as np
@@ -41,16 +26,16 @@ from PULSIM.backend import NumpyBackend
 
 PI, twoPI = np.pi, 2 * np.pi
 
-J_HZ = 140.0                         # real 1J(NH)
+J_HZ = 92.0                         # Hz, 1J(NH)
 tp_ms = 1                           # shaped pulse length, ms
-N = 64                              # number of offsets to sweep
+N = 65                              # offsets to sweep (odd: centre is on resonance)
 W_hz = np.linspace(-1, 1, N) * 4000.0
 
 GAMMA_H = gyro_ratio('H')
 GAMMA_C = gyro_ratio('13C')
 GAMMA_N = gyro_ratio('15N')
 
-# -- Apply 90˚ GaussCascadeQ5 pulse ------------------
+# -- Apply a 90x EBURP1 pulse ------------------------
 shape = RFShape.create("eburp1", duration=tp_ms, points=500)
 pulse = Pulse(shape, PI / 2, axis = "x", backend=NumpyBackend(Gamma=GAMMA_H))
 seg = ShapePulseSegment(pulse)
