@@ -1,6 +1,6 @@
 """
-relaxation.py -- phenomenological T1/T2 relaxation for Liouville-space
-propagation.
+relaxation.py -- phenomenological T1/T2 relaxation for density-matrix
+propagation (liouville.py).
 
 The Bloch side already relaxes (backend.py -> bloch_relax_rotate_batch). This
 is the density-matrix counterpart, deliberately built to the same contract:

@@ -1,9 +1,20 @@
 """
-liouville.py -- Liouville-space (density-matrix) pulse sequence propagation.
+liouville.py -- density-matrix pulse sequence propagation.
+
+The name refers to the Liouville-von Neumann equation, d(sigma)/dt =
+-i[H, sigma], which this module solves. It does NOT work in Liouville space:
+there is no vectorized sigma and no Liouvillian superoperator. Each step is
+sigma -> U sigma U^dagger with U = exp(-iH dt), on 2^n x 2^n matrices in
+Hilbert space.
+
+Scope: scalar coupling enters only through its secular IzSz term (weak
+coupling), so strong coupling is not modelled; nor are chemical exchange,
+cross-relaxation or NOE. Optional relaxation is phenomenological T1/T2 decay
+of each product operator (see relaxation.py), not a relaxation superoperator.
 
 A Segment is one piece of a pulse sequence (a shaped pulse, a delay, an ideal pulse).
-Every Segment knows how to hand back the Hamiltonian(s) that act during it; 
-LiouvilleSequence does the acutal sigma -> exp(-iHt) sigma exp(iHt) propagation once, in on place,
+Every Segment knows how to hand back the Hamiltonian(s) that act during it;
+LiouvilleSequence does the actual sigma -> exp(-iHt) sigma exp(iHt) propagation once, in one place,
 for every segment uniformly -- not re-implemented per segment type.
 """
 
@@ -142,8 +153,9 @@ class ShapePulseSegment(Segment):
             yield H0 + 2 * np.pi * Gamma * (w.real * SX + w.imag * SY), dt
 
 class LiouvilleSequence:
-    """An ordered list of Segments, propagated in Liouville space."""
-
+    """An ordered list of Segments, propagated as sigma -> U sigma U^dagger
+    (Hilbert space; see the module docstring for the scope)."""
+    
     def __init__(self, segments, spin_system, relaxation=None):
         self.segments = segments
         self.spin_system = spin_system

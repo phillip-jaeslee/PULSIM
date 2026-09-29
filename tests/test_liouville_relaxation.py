@@ -1,6 +1,6 @@
 """
 Analytic and cross-formalism tests for phenomenological relaxation in
-Liouville space (PULSIM/relaxation.py).
+density-matrix propagation (PULSIM/relaxation.py).
 
 Nothing here is a golden test. Every assertion is against a closed-form
 solution, against the Bloch backend that already implements the same physics

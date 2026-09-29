@@ -1,6 +1,6 @@
 """
 spin_system.py -- SpinSystem: a bundle of per-spin properties for
-Liouville-space simulation.
+density-matrix simulation.
 
 Spins are identified by nucleus label ('H', '13C', ...) rather than a raw
 gamma value -- gyro_ratio() is the single source of truth for what gamma

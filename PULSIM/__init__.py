@@ -1,5 +1,5 @@
 """
-PULSIM -- Bloch-equation and Liouville-space NMR pulse simulation.
+PULSIM -- Bloch-equation and density-matrix NMR pulse simulation.
 
 This __init__.py re-exports the main entry points so `from PULSIM import X`
 works for everyday use. Anything not listed here is still reachable via its
