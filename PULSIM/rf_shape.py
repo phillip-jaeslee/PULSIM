@@ -1448,22 +1448,29 @@ class FileShape(RFShape):
         return magnitude * phasor * self.amplitude
 
     @property
+    def q_mid(self):
+        """Q only if the caller gave one. A file never stores Q, so there is
+        no default here -- inheriting RFShape's 5.0 would invent physical
+        amplitude the file never specified (audit Part 5, section 5.7).
+        """
+        q = self.params.get("q_mid")
+        return None if q is None else float(q)
+
+    @property
     def calibration(self):
         if self.calibration_mode != "adiabatic":
             return super().calibration
+        if self.q_mid is not None:
+            return super().calibration      # Q from the measured resonance crossing
 
         raise NotImplementedError(
             f"{self.path} declares SHAPE_EXMODE={self.header.exmode!r}, so it "
             f"cannot be calibrated from a flip angle: an adiabatic pulse's "
             f"behaviour is set by its sweep rate and adiabaticity factor Q, not "
-            f"by its pulse area.\n"
+            f"by its pulse area. The file does not store Q.\n"
+            f"  - Give the design Q:            FileShape(..., q_mid=5.0)\n"
             f"  - Give the amplitude directly:  Pulse(shape, nu1_max=<kHz>)\n"
-            f"  - Or override the file's claim: FileShape(..., intent=None)\n"
-            f"Design data present in this file: "
-            f"SHL_ block {'yes' if self.header.design else 'no'}, "
-            f"SHAPE_PARAMETERS "
-            f"{'yes' if self.header.text('SHAPE_PARAMETERS') else 'no'}. "
-            f"Deriving a calibration from either is not yet implemented."            
+            f"  - Or override the file's claim: FileShape(..., intent=None)"            
         )
 
     def __repr__(self):
