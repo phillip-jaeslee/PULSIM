@@ -1,59 +1,52 @@
 """
-tutorial_inept.py -- INEPT (Insensitive Nuclei Enhanced by Polarization
-Transfer, Morris & Freeman, JACS 101, 760 (1979)).
+tutorial_inept_shaped.py -- INEPT (Insensitive Nuclei Enhanced by
+Polarization Transfer, Morris & Freeman, JACS 101, 760 (1979)) with real
+band-selective shaped pulses in place of the hard 90s of tutorial_inept.py.
 
-Sequence (non-refocused INEPT, I = 1H, S = 15N):
+Sequence (non-refocused INEPT, I = 1H, S = 13C, J = 140 Hz ~ 1J(CH)):
 
-    Iz(I)  --90x(I)-->  --delay,Delta-->  --180x(I),180x(S)-->  --delay,Delta-->  --90y(I),90x(S)-->
+    Iz(I) --eb2try(I)--> --Delta--> --180x(I),180x(S)--> --Delta--> --eb2x(I), 90x(S)-->
 
 The two delays + simultaneous 180s form a spin echo: it refocuses each
-spin's own chemical-shift offset (so the sequence works regardless of
-resonance offset) while leaving the heteronuclear J-coupling evolving
-continuously across the full 2*Delta -- that asymmetry (offsets cancel,
-J doesn't) is the entire mechanism INEPT exploits to transfer coherence
-from the sensitive, high-gamma I spin onto the insensitive S spin.
+spin's own chemical-shift offset while leaving the heteronuclear J-coupling
+evolving across the full 2*Delta -- the asymmetry INEPT exploits to move
+polarization from the sensitive I spin onto the insensitive S spin.
 
-Verified numerically (product-operator ground truth, Levitt's Spin
-Dynamics conventions) before writing this file:
-  - the final state's antiphase S-coherence amplitude (coefficient of
-    2*Iz(I)*Iy(S)) equals exactly -sin(2*pi*J*Delta), peaking at
-    Delta = 1/(4J);
-  - WITH the 180 refocusing pulses, the final transfer amplitude is
-    identical on- and off-resonance; WITHOUT them, off-resonance runs
-    scramble into a mix of in-phase and antiphase S coherence instead.
+With hard pulses the antiphase S amplitude (coefficient of 2*Iz(I)*Iy(S)) is
+-sin(2*pi*J*Delta), peaking at Delta = 1/(4J) (see tutorial_inept.py). The
+1.5 ms E-BURP-2 pulses used here (eb2try going in: time-reversed, y phase;
+eb2x coming out) let J evolve during the pulses themselves, so the optimum
+moves to a SHORTER delay. The shift, 1.077 ms, is a property of the pulses,
+not of J: it is the same shortening found in tutorial_delay_optimization.py
+for J = 92 Hz, and the lab's empirical correction is 1.08 ms.
+
+The pulses are PULSIM's analytic E-BURP-2, so the tutorial runs from a clean
+clone; see tutorial_HN_shaped_refocusing.py for how they relate to the lab's
+vendor shape files.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import minimize_scalar
 
-from PULSIM.spin_operators import Ix, Iy, Iz, embed, product_operator
+from PULSIM.spin_operators import Iy, Iz, embed, product_operator
 from PULSIM.spin_system import SpinSystem, gyro_ratio
-from PULSIM.liouville import Delay, IdealPulse, RawShapedPulseSegment, LiouvilleSequence, ShapePulseSegment
+from PULSIM.liouville import Delay, IdealPulse, LiouvilleSequence, ShapePulseSegment
 from PULSIM.pulse_oo import Pulse
 from PULSIM.backend import NumpyBackend
 from PULSIM.rf_shape import RFShape
 from PULSIM.sequence_figure import draw_sequence
 
 PI = np.pi
-J_HZ = 140          # real Hz, ~1J(NH)
-duration = 1.5     # ms
+J_HZ = 140          # Hz, ~1J(CH)
+duration = 1.5      # ms, each shaped pulse
 
-GAMMA_H = gyro_ratio('H')
-GAMMA_C = gyro_ratio('13C')
-rfPow = 2 * PI * 2730.78242 / 1000.0   # real hardware peak power, rad/ms
-                                        # (2730.78242 Hz -> rad/s -> rad/ms;
-                                        # see tutorial_HN_shaped_refocusing.py)
+backend = NumpyBackend(Gamma=gyro_ratio('H'))
+eb2x = Pulse(RFShape.create("eburp2", duration=duration, points=500),
+             PI / 2, axis="x", backend=backend)
+eb2try = Pulse(RFShape.create("eburp2", duration=duration, points=500, time_reversed=True),
+               PI / 2, axis="y", backend=backend)
 
-def hardware_rf(path):
-    """EBURP2/EBURP2tr are calibrated to a fixed real peak power, not a
-    target flip angle -- calibrated_rf()'s flip-based normalization can't
-    reproduce that (dividing a real flip by sum(envelope) doesn't recover a
-    fixed physical power, and for eb2try's y-phased/imaginary envelope it
-    also silently rotates the nutation axis). Build the RF trajectory
-    directly instead, same as tutorial_HN_shaped_refocusing.py."""
-    shape = RFShape.create("file", path=path, duration=duration)
-    rf = np.conj(shape.envelope()) * rfPow / 100.0   # /100: file stores 0-100%
-    return rf, shape.dt
 
 def build_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     """The sequence itself, as segments.
@@ -64,21 +57,12 @@ def build_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     """
     ss = SpinSystem(nuclei=['H', '13C'], offsets=[off_I, off_S], couplings={(0, 1): J_HZ})
 
-    rf1, dt1 = hardware_rf('wave/eb2try_1.5m_ofs0Hz.500')
-    rf2, dt2 = hardware_rf('wave/eb2x_1.5m_ofs0Hz.500')
-
-    #segments = [RawShapedPulseSegment(rf1, dt1, channel='H')]
-    shape = RFShape.create("eburp1", duration=duration, points=1000)
-    p90_H_x = Pulse(shape, PI / 2, axis="x", backend=NumpyBackend(Gamma=GAMMA_H))
-    segments = [ShapePulseSegment(p90_H_x)]
-    segments.append(Delay(Delta))
+    segments = [ShapePulseSegment(eb2try), Delay(Delta)]
     if refocus:
         segments.append(IdealPulse(PI, phase=0.0, channel='H'))
         segments.append(IdealPulse(PI, phase=0.0, channel='13C'))
     segments.append(Delay(Delta))
-    #segments.append(RawShapedPulseSegment(rf2, dt2, channel='H'))
-    p90_H_y = Pulse(shape, PI / 2, axis="y", backend=NumpyBackend(Gamma=GAMMA_H))
-    segments.append(ShapePulseSegment(p90_H_y))
+    segments.append(ShapePulseSegment(eb2x))
     segments.append(IdealPulse(PI / 2, phase=0.0, channel='13C'))
 
     return LiouvilleSequence(segments, ss)
@@ -92,26 +76,31 @@ def run_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     return np.trace(sigma_final @ A).real / np.trace(A @ A).real
 
 # -- transfer efficiency vs Delta ----------------------
-Delta_opt = 1.0 / (4 * J_HZ / 1000.0) # ms
-deltas = np.linspace(0.0, 2 * Delta_opt, 60)
+Delta_hard = 1.0 / (4 * J_HZ / 1000.0)   # ms, the hard-pulse optimum 1/(4J)
+deltas = np.linspace(0.0, 2 * Delta_hard, 60)
 transfer = np.array([run_inept(d) for d in deltas])
 theory = -np.sin(2 * PI * (J_HZ / 1000.0) * deltas)
 
+best = minimize_scalar(lambda d: run_inept(d), bounds=(0.05, 2 * Delta_hard), method="bounded")
+Delta_shaped = best.x
+
 fig, axs = plt.subplots(2, 1, figsize=(7, 8))
-axs[0].plot(deltas, transfer, 'o', label="simulated (product-operator)")
-axs[0].plot(deltas, theory, '-', label=r"theory: $-\sin(2\pi J \Delta)$")
-axs[0].axvline(Delta_opt, color='gray', linestyle=':', label=r"$\Delta = 1/(4J)$")
+axs[0].plot(deltas, transfer, 'o', label="simulated, eb2try / eb2x (1.5 ms)")
+axs[0].plot(deltas, theory, '-', label=r"hard pulses: $-\sin(2\pi J \Delta)$")
+axs[0].axvline(Delta_hard, color='gray', linestyle=':', label=r"$\Delta = 1/(4J)$")
+axs[0].axvline(Delta_shaped, color='C0', linestyle='--', label=f"shaped optimum, {Delta_shaped:.3f} ms")
 axs[0].set_xlabel("Delta (ms)")
 axs[0].set_ylabel(r"antiphase S amplitude ($2 I_z(I) I_y(S)$)")
-axs[0].set_title(f"INEPT transfer efficiency vs delay (J = {J_HZ:.0f} Hz)")
+axs[0].set_title(f"Shaped INEPT transfer vs delay (J = {J_HZ:.0f} Hz)")
 axs[0].legend()
 
-draw_sequence(build_inept(Delta_opt), ax=axs[1], to_scale=False,
-              title=f"shaped INEPT, to scale  ($\\Delta$ = {Delta_opt:.2f} ms, "
+draw_sequence(build_inept(Delta_shaped), ax=axs[1], to_scale=False,
+              title=f"shaped INEPT, not to scale  ($\\Delta$ = {Delta_shaped:.2f} ms, "
                     f"1.5 ms shaped pulses)")
 plt.tight_layout()
 plt.savefig("tutorial_figures/tutorial_inept_shaped.png", dpi=150)
 plt.show()
 
-print("Transfer amplitude at Delta_opt (on-resonance, refocused):",
-      run_inept(Delta_opt, 0.0, 0.0, refocus=True))
+print(f"at Delta = 1/(4J) = {Delta_hard:.4f} ms: transfer {run_inept(Delta_hard):+.4f}")
+print(f"shaped optimum     = {Delta_shaped:.4f} ms: transfer {run_inept(Delta_shaped):+.4f}")
+print(f"shortened by {Delta_hard - Delta_shaped:.4f} ms (tutorial_delay_optimization.py: 1.077 ms)")
