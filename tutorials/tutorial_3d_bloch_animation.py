@@ -9,7 +9,7 @@ traces with np.append chains.
  
 Sequence (a single uncoupled 1H, no coupling partner, no relaxation):
  
-    M0 = +z  --sine.jhl 90y, 0.6 ms-->  --hard 180(-y), 12 us-->  --sine.jhl 90y, 0.6 ms-->
+    M0 = +z  --sine 90y, 0.6 ms-->  --hard 180(-y), 12 us-->  --sine 90y, 0.6 ms-->
  
 Every other tutorial here plots the END of a sequence against offset: one
 number per isochromat, after everything has happened. This one plots the
@@ -19,6 +19,13 @@ ten isochromats leaving +z together, fanning apart by offset during the
 soft pulse, being thrown across the sphere by the hard 180, and partly
 refocusing on the way back.
  
+The soft pulse is a half sine, read from PULSIM's own synthetic shape file
+tests/fixtures/waveforms/pulsim_sine (generated from its formula by
+tools/generate_test_waveforms.py), so the tutorial runs from a clean clone.
+The lab's vendor sine.jhl is the same function at 1000 points instead of
+513; after resampling to 600 points the two agree to 1e-7, and every number
+quoted below is unchanged.
+
 What the sequence does, as measured below rather than as claimed:
  
     offset      final M                     
@@ -31,7 +38,7 @@ far off resonance it inverts -- and the animation is where you can see why.
  
 The offsets sweep +/-1.5 kHz across ten isochromats. That number is the
 shape's own half-height excitation width, measured from this file: a lone
-sine.jhl 90y at 0.6 ms holds |Mxy| >= 0.9 out to +/-0.88 kHz and >= 0.5
+sine 90y at 0.6 ms holds |Mxy| >= 0.9 out to +/-0.88 kHz and >= 0.5
 out to +/-1.56 kHz. Sweeping wider would fan the arrows past the point
 where the first pulse still excites them.
  
@@ -54,7 +61,7 @@ of this file re-runs that comparison on every execution.
 The one place the two paths genuinely differ: the legacy sim_* loop
 carries an `if n == 0: M[:, n] = M[:, n]` branch that skips the very first
 RF sample of the first pulse. It costs nothing here -- M starts along z
-and sine.jhl opens at zero amplitude, so the skipped step is a rotation of
+and the sine opens at zero amplitude, so the skipped step is a rotation of
 a z-aligned vector about z, i.e. the identity -- but it would not be
 harmless for a starting state off the z axis. Pulse.apply() applies every
 sample.
@@ -73,7 +80,7 @@ from PULSIM.visualization import plot_3D_arrow_snapshots, plot_3D_arrow_with_pul
  
 PI = np.pi
  
-SHAPE_FILE = "wave/sine.jhl"
+SHAPE_FILE = "tests/fixtures/waveforms/pulsim_sine.jhl"
 tp_soft = 0.6                       # soft pulse length, ms
 tp_hard = 0.012                     # hard pulse length, ms
 N_ARROWS = 10
