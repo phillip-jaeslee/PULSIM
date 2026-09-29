@@ -50,7 +50,7 @@ import warnings
 
 from scipy.interpolate import CubicSpline
 from .file_import import import_file
-from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, NumericAdiabaticCalibration, signed_integral_of
+from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, NumericAdiabaticCalibration, resonance_crossing, signed_integral_of
 from .bruker import read_bruker_header
 
 
@@ -993,6 +993,30 @@ class SinCos(AnalyticShape):
 
         return amp * np.exp(1j * phase)
 
+    @property
+    def q_mid(self):
+        if "q_mid" in self.params:
+            return float(self.params["q_mid"])
+        return self.calibration.q_mid
+
+    @property
+    def calibration(self):
+        """Bendall & Pegg design: amplitude ~ sin and offset ~ cos share ONE
+        scale, so the effective field has constant magnitude and turns at a
+        uniform rate. That fixes the RF amplitude from the sweep itself:
+
+            nu1_max = peak offset = factor / T        [kHz, T in ms]
+
+        rather than leaving it free for a chosen Q. The Q this implies
+        (8 at the defaults, factor 4, T = 2 ms) is reported, not imposed.
+        Pass q_mid=... explicitly to calibrate by Q like the other families.
+        """
+        if "q_mid" in self.params:
+            return super().calibration
+        crossing = resonance_crossing(self.envelope())
+        nu1 = self.params.get('factor', 4.0) / self.duration
+        q_matched = (2 * np.pi * nu1 * crossing.amp_rel * self.duration) ** 2 / crossing.rate_norm
+        return NumericAdiabaticCalibration(q_mid=q_matched, crossing=crossing)
 
 class Wurst(AnalyticShape):
     name = "wurst"
@@ -1109,7 +1133,13 @@ class TanhTan(AnalyticShape):
     tan(kappa), x in [-1, 1], where kappa = atan(tan_kappa).
     Extra params: sweep_width (Hz, default 40000.0), zeta (amplitude
     steepness, default 10.0), tan_kappa (frequency-sweep steepness, i.e.
-    tan(kappa), default 20.0)."""
+    tan(kappa), default 20.0).
+
+    Calibrated by Q at the resonance crossing like the other families. Note
+    that the tan sweep is slow at the centre and fast at the edges, so the
+    on-resonance Q says little about off-resonance spins: at the defaults,
+    Q = 5 inverts only ~2 kHz of the 40 kHz sweep. Whether this shape matches
+    Garwood & Ke's definition has not been checked yet."""
     def _build(self):
         sweep_width = self.params.get('sweep_width', 40000.0)
         zeta = self.params.get('zeta', 10.0)
