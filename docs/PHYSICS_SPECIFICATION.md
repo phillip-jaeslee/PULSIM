@@ -12,7 +12,7 @@ This document defines the physical model independently of any particular softwar
 3. Relaxation and exact affine propagation.
 4. RF phase, pulse calibration, offsets, and negative-gyromagnetic-ratio nuclei.
 5. Sampled waveforms, numerical convergence, and validation.
-6. Shaped and adiabatic pulses, imported formats, and model limitations.
+6. Shaped and adiabatic pulses, imported formats, and model limitations — adiabatic calibration drafted below (Section 6).
 7. Mapping of the physics to the OOP interfaces.
 8. Gradients, spatial ensembles, and spoiling.
 9. Vendor shape files and declared intent.
@@ -510,6 +510,250 @@ orientation or site dependence is modeled.
 
 ---
 
+## 6. Adiabatic pulses: calibration by Q
+
+**Status:** Draft completed 2026-09-29, implemented in `PULSIM/calibration.py`,
+`PULSIM/rf_shape.py` and `PULSIM/pulse_oo.py`. This section covers how an
+adiabatic pulse's RF amplitude is determined. Sampling and convergence of
+shaped pulses in general (roadmap item 5) are not yet drafted.
+
+### 6.1 Scope and the rule
+
+An amplitude-modulated pulse is calibrated from its signed area: the flip
+angle fixes $\nu_{1,\max}$. **An adiabatic pulse is not.** Its behaviour is
+set by how slowly the effective field turns compared with how large it is,
+so its amplitude is fixed by an adiabaticity factor $Q$ and the frequency
+sweep, and a flip angle plays no part in it. The two routes share one
+propagator; only the calibration differs.
+
+A shape is adiabatic when it *declares* `intent = "adiabatic"` (analytic
+shapes) or when its file declares `SHAPE_EXMODE= Adiabatic` (Section 9.5).
+It is never inferred from the waveform.
+
+### 6.2 Definition of Q
+
+With the instantaneous offset $\Delta\omega(t)$ taken from the phase of the
+sampled envelope, and $t_c$ the time at which the sweep passes through
+resonance, $\Delta\omega(t_c)=0$:
+
+```math
+Q=\frac{\omega_1(t_c)^2}{\left|\,d\Delta\omega/dt\,\right|_{t_c}},
+\qquad
+\omega_1(t_c)=2\pi\,\nu_{1,\max}\,A(t_c),
+```
+
+where $A(t)\in[0,1]$ is the envelope amplitude relative to its peak. $Q$ is
+evaluated **at resonance only**, as Bruker defines it; Section 6.9 states
+what that does not guarantee. The design default is $Q=5$, Bruker's rule of
+thumb for inversion.
+
+In normalized time $u=t/T$ the sweep rate is $r/T^2$, where
+$r=|d\Delta\omega/du|_{u_c}$ (rad per unit $u^2$) depends only on the
+waveform. Hence
+
+```math
+\nu_{1,\max}=\frac{\sqrt{Q\,r}}{2\pi\,A(u_c)\,T}
+\qquad[\mathrm{kHz},\ T\ \mathrm{in\ ms}].
+```
+
+### 6.3 Hyperbolic secant: closed form
+
+The design parameters follow Bruker's `SHL_` fields (Section 9.6):
+
+```math
+\beta=\operatorname{arccosh}(1/\text{trunc}),\qquad
+\mu=\frac{\pi\,SW_{1\,\mathrm s}}{2\beta},
+```
+
+with no $\tanh\beta$ factor. The waveform is truncated where
+$\operatorname{sech}(\beta\tau)$ equals the truncation level, a point solved
+exactly rather than searched for on a grid: with $\beta$ derived from the
+truncation, that point falls exactly on a grid sample, and a grid search made
+the pulse length depend on the last bit of `cosh` (x86 and ARM built pulses
+0.06 % apart). The on-resonance sweep rate gives
+
+```math
+\nu_{1,\max}=\frac{a\,\beta}{\pi T}\sqrt{\mu Q},
+\qquad
+\frac{\nu_{1,\max}}{\sqrt Q}=\frac{a\,\beta\sqrt\mu}{\pi T},
+```
+
+with $a=1$ for a full passage. At the Bruker defaults ($SW_{1\,\mathrm s}=20$
+Hz, 1 % truncation) $\nu_{1,\max}/\sqrt Q = 4.107/T$ kHz, and $Q=5$ at
+$T=2$ ms gives $4.5914$ kHz.
+
+**Half passage.** `passage="half"` is the first half of the same full-passage
+design (same $\beta$, $\mu$) stretched over the whole duration: the amplitude
+rises from the truncation level to its peak and the sweep reaches resonance
+exactly at the end, an adiabatic 90° excitation. A half passage of length $T$
+is the first half of a full passage of length $2T$, so
+
+```math
+\nu_{1,\max}^{\text{half}}(T)=\nu_{1,\max}^{\text{full}}(2T),
+\qquad\text{i.e. } a=\tfrac12 .
+```
+
+No Bruker half-passage file was available, so how Bruker quotes `SHL_SW` for
+a half passage is unconfirmed; here $SW_{1\,\mathrm s}$ always means the full
+design's sweep, and the convention is labelled `pulsim_hs_half`, not
+`bruker_…`.
+
+### 6.4 Every other family: measured, not derived
+
+The sweep rate at resonance differs by family (WURST, chirps, tanh/tan, the
+constant-adiabaticity shapes), and HypSec's prefactor does not transfer.
+Rather than a formula per family, $r$ and $A(u_c)$ are **measured from the
+waveform** by `resonance_crossing()`:
+
+1. The instantaneous offset is the phase step between neighbouring samples,
+   taken wrap-safely as $\arg(s_{k+1}\,s_k^{*})$, and kept only where the
+   amplitude exceeds $10^{-3}$ of its peak (the phase is undefined at a zero
+   edge).
+2. **Full passage:** the offset changes sign exactly once; $u_c$ is found by
+   linear interpolation between the bracketing samples.
+   **Half passage:** no sign change, and a local fit extrapolates to zero
+   offset (within 1 % of the sweep) at one end, which becomes $u_c$.
+   **Anything else** — no crossing, or several — has no single $Q$ and is
+   refused.
+3. $r$ is the linear coefficient of a cubic fitted over $\pm1\,\%$ of the
+   samples centred on $u_c$, i.e. the slope *at* $u_c$. A straight-line fit
+   averages over the bend of a tanh-like sweep and reads about 0.2 % low for
+   HypSec.
+
+Against the two closed forms available: HypSec full passage agrees to
+$5\times10^{-6}$ (4001 points), $1.5\times10^{-5}$ (1001) and
+$1.9\times10^{-4}$ (257); the HypSec half passage agrees with Section 6.3 to
+$5\times10^{-6}$; WURST agrees with the linear-chirp rate $2\pi SW/T$ to
+$2.5\times10^{-4}$. The error in $\nu_{1,\max}$ is half the error in $r$.
+
+### 6.5 Family-specific rules
+
+| shape | amplitude from | default |
+|---|---|---|
+| `hypsec` | closed form, Section 6.3 | $Q=5$, full passage |
+| `sincos` | its own sweep (below) | implied $Q=8$ at defaults |
+| `compositesmoothedchirp` | refused | supply `nu1_max` |
+| every other analytic adiabatic shape | Section 6.4 | $Q=5$ |
+| imported file (`FileShape`) | Section 6.4, **only if `q_mid` is given** | none |
+
+**SinCos** (Bendall & Pegg, JMR 67, 376 (1986)): amplitude $\propto\sin$ and
+offset $\propto\cos$ share one scale, so the effective field has constant
+magnitude and turns uniformly. That fixes the amplitude from the sweep,
+$\nu_{1,\max}=$ peak offset $=\text{factor}/T$, instead of leaving it free for
+a chosen $Q$. The implied $Q$ (8 at factor 4, $T=2$ ms; 16 for the half
+passage) is reported, not imposed. An explicit `q_mid` overrides the rule.
+
+**Composite smoothed chirp** crosses resonance once per segment and has no
+single $Q$. It refuses with `NotImplementedError`, whose message names
+`nu1_max`; `Pulse.realized_q` then returns `None`.
+
+**Imported files carry no $Q$** — Bruker does not store it (Section 9.8) — so
+`FileShape` has no default: inheriting 5 would invent an amplitude the file
+never specified.
+
+### 6.6 The flip angle describes, it never scales
+
+For an adiabatic shape `flip` records the intended operation. Each shape
+declares a nominal rotation, `nominal_flip`: $\pi$ for the full-passage
+families, $\pi/2$ for a HypSec or SinCos half passage, `SHAPE_TOTROT` for a
+file, and `None` when unknown or for an area-calibrated shape. `Pulse` is
+**silent** when $|\text{flip}|$ matches it and warns only on a mismatch or when
+the nominal operation is unknown. It never changes the amplitude either way.
+A warning emitted for every adiabatic pulse would teach users to ignore it.
+
+### 6.7 Physical validation
+
+The calibration is checked where it matters, in the Bloch engine
+($T=2$ ms, on resonance, from $+z$):
+
+| | result |
+|---|---|
+| every single-sweep analytic family at $Q=5$ | $M_z\le-0.999$ (limit $-0.99$) |
+| the same families at $Q=2$ | $M_z\ge-0.948$ (limit $-0.97$) |
+| HypSec half passage, $Q=5$ | $M_z=+0.010$, $\lvert M_{xy}\rvert=1.000$ |
+| HypSec half passage, $Q=2$ | $M_z=+0.17$ |
+| SinCos, default rule | $M_z=-0.9997$ |
+
+The required $\nu_{1,\max}$ ranges from 1.1 to 14.2 kHz across the families,
+yet $Q=5$ inverts and $Q=2$ does not for every one of them: Bruker's rule of
+thumb, reproduced from first principles for each family rather than assumed.
+
+Across the 47 adiabatic files of the corpus, 40 have a single resonance
+crossing and calibrate once `q_mid` is given. The 7 refused cross resonance
+more than once: the composite chirps `Crp60comp.4`, `Crp80comp.4` and
+`Crp100comp.4`, `Crp_psyche.20`, and the tanh/tan files `TanhTan_half.test`,
+`Tanhtan,300,50.250` and `Tanhtan,300,50,P5.1250`. The vendor `HypSec` file at $Q=5$, $T=2$ ms gives
+$4.5914$ kHz from its own samples — the same value as Section 6.3.
+
+### 6.8 Implementation contract
+
+| Requirement | Function |
+|---|---|
+| Resonance crossing, sweep rate, amplitude | `calibration.resonance_crossing` → `ResonanceCrossing` |
+| $Q$ calibration from a measured crossing | `calibration.NumericAdiabaticCalibration` |
+| HypSec closed form, full and half | `calibration.AdiabaticCalibration` (`half_width` $=a$) |
+| Choice of calibration per shape | `RFShape.calibration`, overridden by `HyperbolicSecant`, `SinCos`, `FileShape` |
+| Design $Q$ | `RFShape.q_mid` (default 5); `FileShape.q_mid` (no default) |
+| Nominal operation | `RFShape.nominal_flip` and overrides |
+| Flip-angle check | `Pulse._warn_if_flip_is_meaningless` |
+| Achieved $Q$ at a given amplitude | `Pulse.realized_q` |
+
+### 6.9 Validation requirements
+
+1. Swept shapes sweep the width they declare, cross resonance once at the
+   centre, and do so independently of the sample count
+   (`tests/test_adiabatic_sweep.py`) — the guard against the Hz × ms error
+   that once made nine shapes sweep 1000× too fast.
+2. `resonance_crossing` reproduces the HypSec and linear-chirp closed forms,
+   finds a half passage at its edge, and refuses a composite and an unswept
+   pulse (`tests/test_resonance_crossing.py`).
+3. `NumericAdiabaticCalibration` reproduces `AdiabaticCalibration` for
+   HypSec at $Q=2,5,10$; $\nu_{1,\max}/\sqrt Q$ is $Q$-independent and
+   `q_for` inverts `nu1_for` (`tests/test_numeric_adiabatic_calibration.py`,
+   `tests/test_calibration.py`).
+4. $Q=5$ inverts and $Q=2$ does not, for every analytic family; SinCos obeys
+   its own rule; the composite chirp refuses
+   (`tests/test_adiabatic_calibration_all.py`).
+5. The HypSec half passage matches $\nu^{\text{full}}(2T)$ exactly, matches
+   the numerical calibration, and excites 90° in the Bloch engine
+   (`tests/test_hypsec_half_passage.py`).
+6. An imported adiabatic waveform calibrates from a given `q_mid`, refuses
+   without one, and still accepts `nu1_max` with `realized_q is None`
+   (`tests/test_fileshape_adiabatic_q.py`, no vendor file needed).
+7. TanhTan's first half is the published half passage to $10^{-12}$
+   (`tests/test_tanhtan_definition.py`).
+8. A matching flip angle is silent, a mismatched one warns and names the
+   nominal operation, and neither changes the amplitude
+   (`tests/test_adiabatic_flip_warning.py`).
+
+### 6.10 Known limitations
+
+**$Q$ at resonance says nothing about bandwidth.** For TanhTan (de Graaf &
+Nicolay, Concepts Magn. Reson. 9, 247 (1997), Eqs. 14–15; the full passage is
+their half passage followed by its time reverse) the tan sweep is slowest at
+resonance, and an isochromat at offset $D$ crosses resonance about
+$1+(D\tan\kappa/(SW/2))^2$ times faster. At the published $\tan\kappa=20$,
+$Q=5$ inverts ($M_z<-0.9$) only 2.2 kHz of a 40 kHz sweep; $\tan\kappa=5$
+gives 10 kHz. This is the design of tanh/tan — a $B_1$-insensitive building
+block for BIR-4 — not a defect, but no calibration defined at resonance can
+report it. A bandwidth-aware calibration would be a new definition, not a
+correction.
+
+**Half-passage segments stored as files.** Six files (`Gaussramp±up/down.1`,
+`TanhTan_half.nl`, `TanhTan_2nd.nl`) are each half a passage — the waveform
+starts or ends on resonance at full amplitude — while their headers declare
+`Inversion`, 180°. They are presumably played as pairs. PULSIM calibrates
+each file as the half passage its samples describe, so the header's 180° and
+the file's own operation disagree, and a `flip` of $\pi$ is accepted silently.
+
+**The NMRSIM tipping angle.** Varying the tipping angle in NMRSIM changes
+neither $\gamma B_{1,\max}$ nor the inversion profile, which is what Section
+6.6 implements. Whether NMRSIM uses the angle for anything else (display,
+observable selection) is unknown; Section 6.6 is PULSIM's own definition and
+is not claimed to reproduce NMRSIM internals.
+
+---
+
 ## 8. Gradients, spatial ensembles, and spoiling
 
 **Status:** Draft completed 2026-09-14, implemented in `PULSIM/gradients.py`.
@@ -816,19 +1060,31 @@ PULSIM obtains approximately zero by phase cancellation where Bruker reports
 Implementations must expose this field for inspection and must not calibrate
 from it. Conformance requires reporting the disagreement, not resolving it.
 
-### 9.8 Consequence: adiabatic files refuse area calibration
+### 9.8 Consequence: adiabatic files calibrate from a supplied Q, never an assumed one
 
 A file declaring `SHAPE_EXMODE= Adiabatic` acquires
-`calibration_mode == "adiabatic"`, and the area calibration of Section 4 is
-then refused rather than applied. This is a deliberate behaviour change
-affecting 47 files. A chirp has no meaningful pulse-area flip angle, and the
-number the previous code returned was not a number about anything.
+`calibration_mode == "adiabatic"`, and area calibration is refused rather
+than applied. This is a deliberate behaviour change affecting 47 files. A
+chirp has no meaningful pulse-area flip angle, and the number the previous
+code returned was not a number about anything.
 
-The amplitude may still be supplied directly, which is what a spectrometer
-does: `Pulse(shape, nu1_max=...)`. In that case `realized_q` returns `None` —
-the adiabaticity factor is genuinely unknown, because PULSIM cannot yet read
-the design parameters of such a file. `None` states that; it does not
-indicate a failure.
+No Bruker file stores $Q$ — the tier-2 design block holds the sweep and
+truncation, not the adiabaticity — so PULSIM never assumes one for a file.
+There are two ways to give an imported adiabatic pulse its amplitude:
+
+- `FileShape(..., q_mid=Q)`: $
+u_{1,\max}$ follows from $Q$ and the sweep
+  rate **measured from the file's own samples** (Section 6.4). The vendor
+  `HypSec` at $Q=5$, $T=2$ ms gives $4.5914$ kHz, the value of the closed
+  form in Section 6.3 — an independent cross-check of the design relations
+  of Section 9.6.
+- `Pulse(shape, nu1_max=...)`, which is what a spectrometer does. Then
+  `realized_q` returns `None` unless `q_mid` was also given: the
+  adiabaticity is genuinely unknown, and `None` says so rather than
+  indicating a failure.
+
+Without either, the calibration raises, naming both. The nominal operation
+used to check a flip angle (Section 6.6) is read from `SHAPE_TOTROT`.
 
 ### 9.9 Implementation contract
 
@@ -863,15 +1119,17 @@ Implemented in `tests/test_bruker.py`.
 7. `FileShape` takes its intent from the file for `HypSec`, a chirp,
    `Burbop-180.1` and `BadCop1`; an explicit `intent=` overrides in both
    directions.
-8. Area calibration of an adiabatic file raises, with a message naming
-   `nu1_max`; supplying `nu1_max` works and yields `realized_q is None`.
+8. Calibrating an adiabatic file without `q_mid` raises, with a message
+   naming `q_mid` and `nu1_max`; supplying `nu1_max` works and yields
+   `realized_q is None`. Calibration from a supplied `q_mid` is tested
+   without any vendor file in `tests/test_fileshape_adiabatic_q.py`
+   (Section 6.9).
 
 ### 9.11 Not yet implemented
 
 `SHAPE_PARAMETERS` is a free-text design string present in 141 files,
 including 43 of the 47 adiabatic ones — far more than the 18 carrying a
-tier-2 block, and therefore the practical route to calibrating imported
-adiabatic pulses:
+tier-2 block:
 
 ```
 Type: SmoothedChirp ; Total Sweep-Width [Hz] 100000.0 ;
@@ -879,7 +1137,9 @@ Length of Pulse [usec] 500.0 ; % to be smoothed 20.0
 ```
 
 Each pulse family names its parameters differently, so parsing it is a
-separate piece of work and is not claimed here. Until it exists, an imported
-adiabatic pulse must be given its amplitude explicitly. Two files
-(`Bip720,100,10.1`, `Bip720,50,20.1`) carry neither a design block nor
-`SHAPE_PARAMETERS` and will always require it.
+separate piece of work and is not claimed here. It is no longer needed for
+calibration: the sweep rate is measured from the samples (Section 6.4), and
+$Q$ is not in the string either, so it must be supplied in any case. Parsing
+it would still be useful to *record* a file's design — sweep width, length,
+smoothing — for display and for checking a waveform against its stated
+parameters.
