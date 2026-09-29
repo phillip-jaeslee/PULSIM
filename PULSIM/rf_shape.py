@@ -172,9 +172,15 @@ class RFShape(ABC):
         Real-valued shapes are returned as complex with zero imaginary part so
         that every downstream consumer sees one dtype and the amplitude/phase
         split below needs no special-casing.
+
+        time_reversed=True (any shape, passed like any other parameter) plays
+        the waveform backwards. Every calibration, the Q calibration included,
+        is computed from this envelope, so it follows automatically.
         """
         if self._envelope is None:
             raw = np.asarray(self._build())
+            if self.params.get("time_reversed", False):
+                raw = raw[::-1]
             self._envelope = raw.astype(np.complex128)
         return self._envelope
 

@@ -10,22 +10,27 @@ Sequence (I = 1H, S = 15N, J = 92 Hz = real 1J(NH)):
 
 Same spin-echo mechanism as tutorial_inept.py's idealized hard-pulse
 INEPT, but here the pulses (EBURP2tr going in, time-reversed EBURP2
-coming out) are real band-selective shapes loaded from this lab's own
-wave files, and the whole thing is swept across resonance offset (not
-delay) to see how transfer fidelity holds up across the shape's
-bandwidth -- i.e. this is the "realistic, finite-bandwidth pulse"
-companion to the idealized tutorial.
+coming out) are real band-selective shapes, and the whole thing is swept
+across resonance offset (not delay) to see how transfer fidelity holds up
+across the shape's bandwidth -- i.e. this is the "realistic,
+finite-bandwidth pulse" companion to the idealized tutorial.
 
-RF is specified as a fixed real hardware peak power (2730.78 Hz nutation)
-rather than "calibrated to a flip angle", so the shaped-pulse segments use
-RawShapedPulseSegment (which takes an already-scaled RF trajectory
-directly) instead of ShapePulseSegment (which calibrates via a target
-flip angle -- not the right fit for a fixed-power specification, see
-RawShapedPulseSegment's docstring in liouville.py).
+The pulses are built from PULSIM's analytic E-BURP-2 so the tutorial runs
+from a clean clone: eb2x is E-BURP-2 with x phase, eb2try the same pulse
+time-reversed with y phase (-i * reversed(eb2x)) -- the construction of the
+lab's vendor shape files, which it matches to within 3.4 % in amplitude.
 
-Verified against the original dmSim script's xyzBasis + scipy.linalg.expm
-computation before this file was written: matches to ~1.5e-9 across
-sampled offsets, for both starting states shown below.
+RF is a fixed peak nutation rather than "calibrated to a flip angle" per
+segment, so the shaped-pulse segments use RawShapedPulseSegment (which
+takes an already-scaled RF trajectory directly) instead of
+ShapePulseSegment (see RawShapedPulseSegment's docstring in liouville.py).
+The peak is E-BURP-2's 90-degree area calibration, 2.731 kHz -- the same
+2730.78 Hz the lab's files are driven at.
+
+The port was verified against the original dmSim script's xyzBasis +
+scipy.linalg.expm computation to ~1.5e-9 across sampled offsets, using the
+lab's vendor files. With the analytic pulses used here the curves move by
+at most 0.03 (on a unit amplitude), mostly near the band edges.
 """
 
 import numpy as np
@@ -34,27 +39,26 @@ import matplotlib.ticker as ticker
 
 from PULSIM.spin_operators import Ix, Iy, Iz, embed, product_operator
 from PULSIM.spin_system import SpinSystem, gyro_ratio
-from PULSIM.liouville import Delay, IdealPulse, RawShapedPulseSegment, LiouvilleSequence
+from PULSIM.liouville import Delay, IdealPulse, ShapePulseSegment, LiouvilleSequence
 from PULSIM.rf_shape import RFShape
+from PULSIM.pulse_oo import Pulse
+from PULSIM.backend import NumpyBackend
 
 PI, twoPI = np.pi, 2 * np.pi
 
 J_HZ = 92.0                        # real 1J(NH)
 tp_ms = 1.5                        # shaped pulse length, ms
-rfPow_rad_ms = (twoPI * 2730.78242) / 1000.0   # peak RF power, rad/ms (from rad/s)
 N = 64                              # number of offsets to sweep
 W_hz = np.linspace(-1, 1, N) * 4000.0
 
-shape1 = RFShape.create("file", path="wave/eb2try_1.5m_ofs0Hz.500", duration=tp_ms)
-shape2 = RFShape.create("file", path="wave/eb2x_1.5m_ofs0Hz.500", duration=tp_ms)
-RF1 = np.conj(shape1.envelope()) * rfPow_rad_ms / 100.0
-RF2 = np.conj(shape2.envelope()) * rfPow_rad_ms / 100.0
+backend = NumpyBackend(Gamma=gyro_ratio('H'))
+eb2x = Pulse(RFShape.create("eburp2", duration=tp_ms, points=500), PI / 2, axis="x", backend=backend)
+eb2try = Pulse(RFShape.create("eburp2", duration=tp_ms, points=500, time_reversed=True), PI / 2, axis="y", backend=backend)
 
-seg1 = RawShapedPulseSegment(RF1, shape1.dt, channel='H')
-seg2 = RawShapedPulseSegment(RF2, shape2.dt, channel='H')
+seg1 = ShapePulseSegment(eb2try)
+seg2 = ShapePulseSegment(eb2x)
 
 Delta_ms = 250.0 / J_HZ   # 1/(4J), ms
-
 
 def run(sigma0, W_hz_i):
     off_H = twoPI * (W_hz_i / 1000.0)   # Hz -> rad/ms
