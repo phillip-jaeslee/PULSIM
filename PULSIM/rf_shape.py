@@ -231,6 +231,16 @@ class RFShape(ABC):
         return float(self.params.get("q_mid", self.default_q_mid))
 
     @property
+    def nominal_flip(self):
+        """The rotation an adiabatic shape is designed to perform, in rad, or
+        None when that is unknown or the shape is not adiabatic. It DESCRIBES
+        the pulse -- Pulse uses it only to check a user's flip angle against,
+        never to scale RF. The analytic families here are full-passage
+        inversions; half-passage shapes override this.
+        """
+        return np.pi if self.calibration_mode == "adiabatic" else None
+
+    @property
     def calibration(self):
         """The strategy that turns this normalized envelope into a field in mT.
 
@@ -917,6 +927,10 @@ class HyperbolicSecant(AnalyticShape):
         return float(self.params.get("q_mid", self.default_q_mid))
 
     @property
+    def nominal_flip(self):
+        return np.pi if self.passage == "full" else np.pi / 2
+
+    @property
     def passage(self):
         passage = self.params.get("passage", "full")
         if passage not in ("full", "half"):
@@ -1010,6 +1024,10 @@ class SinCos(AnalyticShape):
         amp = amp * self.amplitude                       # scale to desired amplitude
 
         return amp * np.exp(1j * phase)
+
+    @property
+    def nominal_flip(self):
+        return np.pi if self.params.get('full_passage', True) else np.pi / 2
 
     @property
     def q_mid(self):
@@ -1472,6 +1490,15 @@ class FileShape(RFShape):
         phase_deg = self.xy[:, 1]
         phasor = np.exp(-1j * np.deg2rad(phase_deg))
         return magnitude * phasor * self.amplitude
+
+    @property
+    def nominal_flip(self):
+        """From the file's SHAPE_TOTROT when it declares one; otherwise
+        unknown. Never guessed from the waveform."""
+        if self.calibration_mode != "adiabatic":
+            return None
+        totrot = self.header.totrot
+        return None if not totrot else np.deg2rad(totrot)
 
     @property
     def q_mid(self):

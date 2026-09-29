@@ -78,19 +78,32 @@ class Pulse:
         return self.shape.calibration.q_for(self.nu1_max, self.shape.duration)
 
     def _warn_if_flip_is_meaningless(self):
+        """For an adiabatic pulse, flip describes the intended operation and
+        never scales RF (audit Part 5, section 5.2). Warn only when it
+        contradicts the shape's nominal operation, or when that operation is
+        unknown -- a warning on every adiabatic pulse would teach users to
+        ignore it.
+        """
         if self.flip is None:
             return
+        nominal = getattr(self.shape, "nominal_flip", None)
+        if nominal is not None and np.isclose(abs(self.flip), nominal):
+            return
         q_mid = getattr(self.shape, "q_mid", None)
-        detail = f" (q_mid={q_mid})" if q_mid is not None else ""
+        detail = f" (q_mid={q_mid:g})" if q_mid is not None else ""
+        if nominal is None:
+            expected = "Its nominal operation is not declared, so the flip angle cannot be checked."
+        else:
+            expected = (f"It is designed as a {np.degrees(nominal):.0f}-degree operation, "
+                        f"not {np.degrees(abs(self.flip)):.1f} degrees.")
         warnings.warn(
-            f"flip={self.flip:.4f} rad does not scale the RF amplitude for "
+            f"flip does not scale the RF amplitude for "
             f"{type(self.shape).__name__}, which is adiabatic: amplitude comes "
-            f"from the sweep rate and Q{detail}. The flip angle is recorded as "
-            f"the intended operation only.",
+            f"from the sweep rate and Q{detail}. {expected}",
             UserWarning,
             stacklevel=3,
         )
-
+        
     def calibrated_rf(self):
         """The shape's envelope scaled to a physical RF field in mT."""
 
