@@ -1153,11 +1153,19 @@ class TanhTan(AnalyticShape):
     steepness, default 10.0), tan_kappa (frequency-sweep steepness, i.e.
     tan(kappa), default 20.0).
 
-    Calibrated by Q at the resonance crossing like the other families. Note
-    that the tan sweep is slow at the centre and fast at the edges, so the
-    on-resonance Q says little about off-resonance spins: at the defaults,
-    Q = 5 inverts only ~2 kHz of the 40 kHz sweep. Whether this shape matches
-    Garwood & Ke's definition has not been checked yet."""
+    Checked against de Graaf & Nicolay, Concepts Magn. Reson. 9, 247 (1997),
+    Eqs. 14-15: the published tanh/tan is a HALF passage (the BIR-4 segment),
+    and this full passage is that half passage followed by its time reverse,
+    with the published defaults xi = 10, tan(kappa) = 20.
+    tests/test_tanhtan_definition.py holds the first half to those equations.
+
+    Calibrated by Q at the resonance crossing like the other families. The tan
+    sweep is slowest at resonance, and an isochromat at offset D crosses
+    resonance about 1 + (D*tan(kappa)/(SW/2))^2 times faster, so the Q it sees
+    falls off quickly: at the defaults Q = 5 inverts only ~2 kHz of the 40 kHz
+    sweep (Mz < -0.9). That is the design, not a defect -- tanh/tan is a
+    B1-insensitive building block, not a broadband inversion pulse. A smaller
+    tan_kappa trades that for bandwidth: ~10 kHz at tan_kappa = 5, Q = 5."""
     def _build(self):
         sweep_width = self.params.get('sweep_width', 40000.0)
         zeta = self.params.get('zeta', 10.0)
