@@ -50,7 +50,7 @@ import warnings
 
 from scipy.interpolate import CubicSpline
 from .file_import import import_file
-from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, signed_integral_of
+from .calibration import beta_from_truncation, mu_from_sweep_width, AreaCalibration, AdiabaticCalibration, NumericAdiabaticCalibration, signed_integral_of
 from .bruker import read_bruker_header
 
 
@@ -218,27 +218,38 @@ class RFShape(ABC):
         """"area" (flip angle -> signed pulse area) or "adiabatic"
         (sweep rate + Q). Derived from intent so there is one source of truth."""
         return "adiabatic" if self.intent == "adiabatic" else "area"        
+    
+    #: Design adiabaticity for shapes that declare intent="adiabatic".
+    #: Bruker's rule of thumb: Q = 5 for inversion, 2-3 for decoupling.
+    #: Override per instance with q_mid=... . Imported files do NOT inherit
+    #: this silently -- FileShape overrides calibration and requires Q or
+    #: nu1_max, because a file never stores Q.
+    default_q_mid = 5.0
+
+    @property
+    def q_mid(self):
+        return float(self.params.get("q_mid", self.default_q_mid))
 
     @property
     def calibration(self):
         """The strategy that turns this normalized envelope into a field in mT.
 
-        Amplitude-modulated shapes calibrate from the signed pulse area. A
-        shape that declares intent='adiabatic' must override this with a
-        strategy carrying its own design parameters -- there is no generic
-        adiabatic calibration, because the on-resonance sweep rate depends on
-        the family (HypSec, WURST, tanh/tan, the constant-adiabaticity shapes
-        each need their own expression).
+        Amplitude-modulated shapes calibrate from the signed pulse area.
+        Adiabatic shapes calibrate from Q and the sweep rate at the resonance
+        crossing, measured from the waveform (NumericAdiabaticCalibration), so
+        no per-family formula is needed. A shape with a closed form (HypSec)
+        overrides this with it. A waveform with no single resonance crossing
+        (e.g. a composite chirp) has no single Q and refuses.
         """
         if self.calibration_mode == "adiabatic":
-            raise NotImplementedError(
-                f"{type(self).__name__} declares intent='adiabatic' but has no "
-                f"adiabatic calibration implemented. The HypSec sweep-rate "
-                f"expression does not transfer to other adiabatic families. "
-                f"Supply the RF amplitude explicitly (nu1_max) until one exists."
-            )
-        return AreaCalibration(signed_integral_of(self.envelope()))        
-
+            try:
+                return NumericAdiabaticCalibration.from_envelope(self.envelope(), self.q_mid)
+            except ValueError as err:
+                raise NotImplementedError(
+                    f"{type(self).__name__}: no adiabatic calibration -- {err}"
+                ) from err
+        return AreaCalibration(signed_integral_of(self.envelope()))
+    
     @property
     def is_adiabatic(self) -> bool:
         """Deprecated: use ``intent == "adiabatic"`` or ``calibration_mode``.

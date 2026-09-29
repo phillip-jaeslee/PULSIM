@@ -115,7 +115,7 @@ def test_nu1_over_sqrt_q_is_q_independent():
     b = _hypsec_calibration(9.0).nu1_over_sqrt_q(2.0)
     assert a == pytest.approx(b, rel=1e-15)
     assert a * np.sqrt(2.0) == pytest.approx(_hypsec_calibration(2.0).nu1_for(2.0))
-    
+
 def phase_modulated_shapes():
     names = []
     for name in sorted(PULSIM.RFShape.available()):
@@ -125,18 +125,6 @@ def phase_modulated_shapes():
         if np.any(shape.envelope().imag != 0):
             names.append(name)
     return names
-
-def adiabatic_without_calibration():
-    """Every adiabatic shape except the one whose sweep rate we have derived."""
-    return [n for n in phase_modulated_shapes() if n != "hypsec"]
-
-@pytest.mark.parametrize("name", adiabatic_without_calibration())
-def test_adiabatic_families_without_a_sweep_rate_refuse(name):
-    """Ten of the eleven have no derived sweep-rate expression. They must say
-    so rather than silently falling back to area calibration."""
-    shape = PULSIM.RFShape.create(name, duration=DURATION, points=POINTS)
-    with pytest.raises(NotImplementedError, match="adiabatic calibration"):
-        PULSIM.Pulse(shape, backend=PULSIM.NumpyBackend(Gamma=GAMMA)).nu1_max
 
 def test_hypsec_calibrates_without_a_flip_angle():
     """The point of the whole redesign: no flip angle, and it still works."""
