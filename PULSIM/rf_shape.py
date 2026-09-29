@@ -871,7 +871,15 @@ class HyperbolicSecant(AnalyticShape):
     Declares intent = "adiabatic": RF strength comes from the sweep rate and
     the adiabaticity factor Q, not from a flip angle.
 
-    Extra params: truncate, beta, mu, low_to_high.
+    Extra params: sweep_width_1s, truncation_percent, q_mid, passage
+    ("full" or "half"), low_to_high; beta and mu as advanced overrides.
+
+    passage="half" is the first half of the same full-passage design (same
+    beta and mu), stretched over the whole duration: amplitude rises from the
+    truncation level to its peak while the sweep reaches resonance exactly at
+    the end -- an adiabatic 90-degree excitation. No Bruker half-passage file
+    was available to confirm how Bruker quotes SHL_SW for a half passage, so
+    sweep_width_1s here always means the full design's sweep.
     """
     default_duration = 4.0  # matches HYPSEC_pulse's own default
 
@@ -909,18 +917,27 @@ class HyperbolicSecant(AnalyticShape):
         return float(self.params.get("q_mid", self.default_q_mid))
 
     @property
-    def calibration(self):
-        """FULL PASSAGE ONLY.
+    def passage(self):
+        passage = self.params.get("passage", "full")
+        if passage not in ("full", "half"):
+            raise ValueError(f"passage must be 'full' or 'half', not {passage!r}")
+        return passage
 
-        The sweep rate below is evaluated at the resonance crossing at the
-        centre of the sweep. A half passage crosses resonance at the edge of
-        its sweep, so the prefactor differs and has not been derived or
-        verified. This class has no passage parameter yet; when one is added,
-        this property must reject or correct the half-passage case rather than
-        returning a number.
-        """        
+    @property
+    def calibration(self):
+        """Closed-form Q calibration, full or half passage.
+
+        Full passage crosses resonance at the center of the sweep. A half
+        passage of length T is the first half of a full passage of length 2T
+        and crosses resonance at its END, so its sweep rate there is that of
+        the 2T full passage: nu1_half(T) = nu1_full(2T) -- i.e. a = 1/2 in
+        AdiabaticCalibration. tests/ hold this to the numerical calibration
+        and to the Bloch engine
+        """
         beta, mu = self._design()
-        return AdiabaticCalibration(q_mid=self.q_mid, mu=mu, beta=beta, half_width=1.0, convention="bruker_hs_full")
+        if self.passage == "full":
+            return AdiabaticCalibration(q_mid=self.q_mid, mu=mu, beta=beta, half_width=1.0, convention="bruker_hs_full")
+        return AdiabaticCalibration(q_mid=self.q_mid, mu=mu, beta=beta, half_width=0.5, convention="pulsim_hs_half")
 
     def _build(self):
         truncation = float(self.params.get("truncation_percent", self.default_truncation_percent)) / 100
@@ -934,7 +951,8 @@ class HyperbolicSecant(AnalyticShape):
         # the last bit of cosh -- x86 and ARM built pulses 0.06% apart.
         # The 3.0 cap is the old search range, kept for a large beta override.
         t_end = min(np.arccosh(1.0 / truncation) / beta, 3.0)
-        t = np.linspace(-t_end, t_end, self.points)
+        t_stop = t_end if self.passage == "full" else 0.0       # half: end ON resonance
+        t = np.linspace(-t_end, t_stop, self.points)
 
         # sech amplitude either way; reversing the sweep conjugates the phase.
         # (The old low_to_high=False branch used cosh**(1+1j*mu), which is a
