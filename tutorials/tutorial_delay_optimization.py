@@ -95,7 +95,8 @@ textbook = 250.0 / J_HZ   # 1/(4J), ms
 bounds = (0.2 * textbook, textbook + 0.3)
 # The search range must contain the optimum: optimize_delay raises if the
 # answer lands on a bound, which would be the bound, not an optimum.
-result = optimize_delay(run_sequence, lambda s: -Ix_amplitude(s), bounds=(0.2 * textbook, textbook + 0.3))
+result = optimize_delay(run_sequence, lambda s: -Ix_amplitude(s),
+                        bounds=(0.2 * textbook, textbook + 0.3))
 margin = 1e-3 * (bounds[1] - bounds[0])
 assert bounds[0] + margin < result.x < bounds[1] - margin, \
     f"optimum {result.x:.4f} ms is on the search bound {bounds}; widen it"

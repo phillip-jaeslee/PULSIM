@@ -128,13 +128,13 @@ def resonance_crossing(envelope, window=0.01, amp_floor=1e-3, edge_tol=0.01):
     phase step between neighboring samples (wrap-safe), kept only where the
     amplitude is above amp_floor -- the phase is undefined at a zero edge.
 
-    Full passage: the offset changes exactly once, inside the pulse.
+    Full passage: the offset changes sign exactly once, inside the pulse.
     Half passage: no sign change, and the offset extrapolates to zero at one
     end. Anything else (no crossing, or several, as in a composite chirp) has
     no single Q, and this raises rather than picking one.
 
-    The slope cames from a cubic fit centered on the crossing -- its linear
-    coefficient is the slopt AT u_c. A straight line would average over the
+    The slope comes from a cubic fit centered on the crossing -- its linear
+    coefficient is the slope AT u_c. A straight line would average over the
     tanh-like bend of a HypSec sweep and read 0.2% low.
     """
     env = np.asarray(envelope, dtype=complex)
@@ -165,7 +165,7 @@ def resonance_crossing(envelope, window=0.01, amp_floor=1e-3, edge_tol=0.01):
         at_edge = True
     else:
         raise ValueError(
-            f"found {len(flips)} resonance crossing; this waveform has no single Q. Supply nu1_max explicitly."
+            f"found {len(flips)} resonance crossings; this waveform has no single Q. Supply nu1_max explicitly."
         )
     coeffs = np.polyfit(u_mid[sel] - u_c, offset[sel], 3)
     if at_edge and abs(coeffs[-1]) > edge_tol * sweep:
