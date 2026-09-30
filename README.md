@@ -12,11 +12,43 @@
 
 ## Installation
 
-OS X & Linux:
+PULSIM is installed from its repository, not from PyPI — the name `pulsim`
+on PyPI belongs to an unrelated circuit simulator, so `pip install pulsim`
+installs the wrong package.
 
 ```sh
-git clone https://www.github.com/phillip-jaeslee/PULSIM
+git clone https://github.com/phillip-jaeslee/PULSIM
+cd PULSIM
+pip install .            # numpy + scipy: all of the physics
+pip install ".[viz]"     # + matplotlib, for figures, animations and the tutorials
+pip install ".[all]"     # + every optional extra
 ```
+
+or without cloning: `pip install "PULSIM @ git+https://github.com/phillip-jaeslee/PULSIM"`.
+
+| Extra | Adds | For |
+|---|---|---|
+| `viz` | matplotlib, ipywidgets | `PULSIM.visualization`, `PULSIM.sequence_figure`, the tutorials |
+| `file` | pandas | `CompositeCSVShape` |
+| `parallel` | joblib | `parallel_map` |
+| `torch` | torch | `TorchBackend` (experimental, see below) |
+
+## Backends
+
+`Pulse.apply` hands the RF to a backend. **`NumpyBackend` is the default and the
+reference**: double precision, checked to about 1e-14 against an independent
+Rodrigues rotation, and the only backend with relaxation.
+
+`TorchBackend` is **experimental**:
+
+* it computes in float32, so it agrees with the NumPy path to about 1e-6, not
+  1e-14;
+* every RF step copies the magnetization to the device and back, so any speed-up
+  can only come from a GPU, and none has been measured yet;
+* it has no relaxation — passing `T1` or `T2` raises.
+
+It needs the `torch` extra (`pip install ".[torch]"` from a clone). Nothing
+else in PULSIM uses torch.
 
 ## Relaxation
 
@@ -145,9 +177,12 @@ FileShape(path="wave/Burbop-180.1", duration=0.5).intent   # None  (EXMODE=BOP)
 * Pass `intent=` to contradict the file — including `intent=None` to clear its
   claim and force area calibration.
 * An adiabatic file **cannot** be calibrated from a flip angle; a chirp has no
-  meaningful pulse area. Supply the amplitude the way a spectrometer does:
-  `Pulse(shape, nu1_max=<kHz>)`. `realized_q` is then `None`, because the
-  adiabaticity factor is genuinely unknown for an imported file.
+  meaningful pulse area. No shape file stores the adiabaticity factor Q either,
+  so PULSIM never assumes one. Give it the design Q,
+  `FileShape(..., q_mid=5.0)`, and the amplitude follows from the sweep rate
+  measured from the file's own samples; or give the amplitude the way a
+  spectrometer does, `Pulse(shape, nu1_max=<kHz>)`, in which case `realized_q`
+  is `None` unless `q_mid` was given as well.
 * `SHAPE_INTEGFAC` is exposed as `header.integfac` for inspection but is **not**
   used for calibration. Across the 203 files in `wave/` it agrees with PULSIM's
   own integral for fewer than half, in ways neither plausible normalization
@@ -163,7 +198,8 @@ See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §9.
 * 0.0.1
     * Work in progress
 * 0.0.2
-    * Updated numpy into torch for better performance
+    * Updated numpy into torch for better performance (torch is now an optional,
+      experimental backend; NumPy is the default — see [Backends](#backends))
 * 0.1.0
     * First version of PULSIM
 

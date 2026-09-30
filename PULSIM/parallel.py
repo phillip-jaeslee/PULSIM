@@ -16,7 +16,7 @@ parallel case one level up: many independent whole simulations, e.g. a
 parameter sweep. (For several offsets of the same pulse, pass them as
 columns of one M instead -- see tutorial_3d_bloch_animation.py.)
 
-joblib is an optional dependency:  pip install "pulsim[parallel]"
+joblib is an optional dependency:  pip install ".[parallel] from a PULSIM clone"
 """
 
 def require_joblib():
@@ -28,8 +28,9 @@ def require_joblib():
     except ModuleNotFoundError:
         raise ModuleNotFoundError(
             "parallel_map requires joblib, an optional dependency.\n"
-            '    pip install "pulsim[parallel]"\n'
-            "Everything else in PULSIM runs without it."            
+            '    pip install ".[parallel]"   (from a PULSIM clone)\n'
+            "Not `pip install pulsim`: that name on PyPI is an unrelated package.\n"
+            "Everything else in PULSIM runs without it."           
         ) from None
     return joblib
 

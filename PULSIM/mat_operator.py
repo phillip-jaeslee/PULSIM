@@ -1,7 +1,7 @@
 """
 mat_operator.py -- rotation and spin operators, NumPy and PyTorch flavours.
 
-PyTorch is an OPTIONAL dependency (`pip install "pulsim[torch]"`).
+PyTorch is an OPTIONAL dependency (`pip install ".[torch]"` from a clone).
 This module sits at the bottom of the import graph -- bloch.py, backend.py and
 therefore every `import PULSIM` passes through here -- so a hard `import torch`
 on line 1 makes the entire package unimportable wherever torch is absent, most
@@ -31,7 +31,8 @@ def require_torch():
     if torch is None:
         raise ModuleNotFoundError(
             "This PULSIM code path requires PyTorch, an optional dependency.\n"
-            '    pip install "pulsim[torch]"\n'
+            '    pip install ".[torch]"      (from a PULSIM clone)\n'
+            "Not `pip install pulsim`: that name on PyPI is an unrelated package.\n"
             "The default NumPy path (NumpyBackend, bloch_rotate_batch) needs no torch."
         )
     return torch

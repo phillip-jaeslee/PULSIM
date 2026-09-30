@@ -32,7 +32,7 @@ def test_missing_joblib_names_the_extra(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", no_joblib)
-    with pytest.raises(ModuleNotFoundError, match=r"pulsim\[parallel\]"):
+    with pytest.raises(ModuleNotFoundError, match=r"\.\[parallel\]"):
         require_joblib()
 
 

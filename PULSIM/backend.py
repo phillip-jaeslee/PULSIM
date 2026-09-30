@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-# torch is an optional extra (`pip install "pulsim[torch]"`); TorchBackend
+# torch is an optional extra (`pip install ".[torch]"`); TorchBackend
 # imports it lazily in __init__ so that importing this module -- and hence
 # `import PULSIM` -- works in a torch-free environment such as JupyterLite.
 from .bloch import bloch_rotate, torch_bloch_rotate, bloch_rotate_batch, bloch_relax_rotate_batch
@@ -41,9 +41,14 @@ class NumpyBackend(Backend):
         return bloch_relax_rotate_batch(M, dt, B, axis, self.Gamma, self.T1, self.T2, self.M0)
 
 class TorchBackend(Backend):
-    """The torch implementation. torch_bloch_rotate already handles every
-    offset in one call, so there's no loop here — just getting the arrays
-    into the shape it expects and back out again.
+    """The torch implementation -- EXPERIMENTAL. torch_bloch_rotate already
+    handles every offset in one call, so there's no loop here — just getting
+    the arrays into the shape it expects and back out again.
+
+    Experimental because it computes in float32 (agreement with the NumPy
+    path ~1e-6, not ~1e-14), and rotate() copies M to the device and back on
+    every RF step, so any speed-up can only come from a GPU, and none has
+    been measured. NumpyBackend is the default and the reference.
     
     Rotation only: relaxation is not implemented, and asking for it raises
     rather than being quietly dropped.

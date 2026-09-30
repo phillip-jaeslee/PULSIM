@@ -1547,7 +1547,7 @@ class CompositeCSVShape(FileShape):
 
     @staticmethod
     def _read(path):
-        # pandas is an optional extra (`pip install "pulsim[file]"`) and this
+        # pandas is an optional extra (`pip install ".[file]"`) and this
         # one read_csv is the only place the package uses it -- imported here
         # so the rest of PULSIM works without it.
         import pandas as pd

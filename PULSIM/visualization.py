@@ -19,7 +19,7 @@ alongside it and trusted.
 `df` offset array handed to the simulation. Ten arrows means ten offsets
 carried through the same pulse in one vectorized run -- not ten runs.
  
-matplotlib is an optional extra (`pip install "pulsim[viz]"`), so this
+matplotlib is an optional extra (`pip install ".[viz]"`), so this
 module is deliberately NOT imported by PULSIM/__init__.py; import it
 explicitly as `from PULSIM.visualization import ...`.
  
