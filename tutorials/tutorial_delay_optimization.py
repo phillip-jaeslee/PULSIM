@@ -14,6 +14,11 @@ amplitude; with them the optimal shortening is 1.0795 ms instead of the
 
 Both pulses are driven at the 90-degree area calibration of E-BURP-2
 (Pulse(..., flip=pi/2)), which is exactly the peak RF the lab's files use.
+
+Two routes to the same number. Goal 2 predicts it pulse by pulse to first
+order in J: each E-BURP-2 is equivalent to an ideal pulse plus about 1.077 ms
+of free evolution, on the side facing the delays. Goal 1 finds it exactly by
+propagating the whole element. They agree to about 2e-4 ms.
 """
 
 import numpy as np
@@ -45,12 +50,20 @@ seg2 = RawShapedPulseSegment(RF2, dt, channel='H')
 
 print(f"E-BURP-2, {tp_ms} ms, 90-degree calibration: nu1_max = {nu1_khz:.5f} kHz\n")
 
-# -- goal 2: per-pulse effective J-evolution time --------------------------
-for name, rf in [("eb2try", RF1), ("eb2x", RF2)]:
-    Mx_int, My_int, Mz_int = effective_coupling_generator(rf, dt)
-    leakage = np.hypot(Mx_int, My_int)
-    print(f"{name}: t_eff_z = {Mz_int:+.4f} ms (delay-correctable), "
-          f"leakage = {leakage:.4f} ms (not delay-correctable)")
+# -- goal 2: first-order prediction, pulse by pulse ------------------------
+# J keeps evolving during each 1.5 ms pulse. To first order that equals a
+# free-evolution delay on one side of an ideal pulse: eb2try (first in the
+# element) carries it AFTER itself, eb2x (last) BEFORE itself -- both on the
+# side facing the delays, so the delays can absorb it.
+after_try = effective_coupling_generator(RF1, dt, side="after")
+before_x = effective_coupling_generator(RF2, dt, side="before")
+for name, side, c in [("eb2try", "after ", after_try), ("eb2x  ", "before", before_x)]:
+    print(f"{name}: J evolution = {c[2]:.4f} ms of delay {side} the pulse "
+          f"(residual not expressible as a delay: {np.hypot(c[0], c[1]):.4f} ms)")
+# The 180s refocus offsets but not J, so J evolves through both delays: the
+# pulses' extra J time is shared between them.
+predicted = (after_try[2] + before_x[2]) / 2
+print(f"first-order prediction: shorten each delay by {predicted:.4f} ms")
 
 # -- goal 1: exact numerical optimum, no approximation ----------------------
 IySz0 = product_operator(Iy(), 0, Iz(), 1, 2)
@@ -80,7 +93,9 @@ textbook = 250.0 / J_HZ   # 1/(4J), ms
 # its own bound reports the bound, not an answer. The shortening here is
 # about 1.08 ms, so the lower bound sits well below it, and we check.
 bounds = (0.2 * textbook, textbook + 0.3)
-result = optimize_delay(run_sequence, lambda s: -Ix_amplitude(s), bounds=bounds)
+# The search range must contain the optimum: optimize_delay raises if the
+# answer lands on a bound, which would be the bound, not an optimum.
+result = optimize_delay(run_sequence, lambda s: -Ix_amplitude(s), bounds=(0.2 * textbook, textbook + 0.3))
 margin = 1e-3 * (bounds[1] - bounds[0])
 assert bounds[0] + margin < result.x < bounds[1] - margin, \
     f"optimum {result.x:.4f} ms is on the search bound {bounds}; widen it"
@@ -88,4 +103,4 @@ assert bounds[0] + margin < result.x < bounds[1] - margin, \
 print(f"\ntextbook 1/(4J)   = {textbook:.4f} ms  -> Ix = {Ix_amplitude(run_sequence(textbook)):.4f}")
 print(f"optimized delay   = {result.x:.4f} ms  -> Ix = {Ix_amplitude(run_sequence(result.x)):.4f}")
 print(f"shortened by {textbook - result.x:.4f} ms relative to textbook "
-      f"(this lab's own empirical correction: 1.08 ms)")
+      f"(first-order prediction {predicted:.4f} ms; this lab's empirical correction: 1.08 ms)")
