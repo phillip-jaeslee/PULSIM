@@ -43,21 +43,25 @@ class PulseSequence:
                 M = pulse.apply(M, df)
             return M
 
-        pieces = []
-        for k, pulse in enumerate(self.pulses):
+        pieces = [np.asarray(M, dtype=float)[np.newaxis].copy()]   # the starting frame
+        for pulse in self.pulses:
             traj = pulse.apply(M, df, trajectory=True)
-            pieces.append(traj if k == 0 else traj[1:])
+            pieces.append(traj[1:])          # traj[0] repeats the previous frame
             M = traj[-1]
         return np.concatenate(pieces, axis=0)
 
     @property
     def rf(self):
         """Concatenated calibrated RF envelope across every pulse, in order."""
+        if not self.pulses:
+            return np.zeros(0, dtype=complex)
         return np.concatenate([p.calibrated_rf() for p in self.pulses])
-
+    
     @property
     def phase(self):
         """Concatenated RF phase (degrees), across every pulse, in order."""
+        if not self.pulses:
+            return np.zeros(0)
         return np.concatenate([p.shape.phase_profile for p in self.pulses])
 
     @property
@@ -73,5 +77,4 @@ class PulseSequence:
             t_local = np.arange(0, n, 1) * p.shape.dt
             pieces.append(t_local + t0)
             t0 += p.shape.duration
-        return np.concatenate(pieces)
-    
+        return np.concatenate(pieces) if pieces else np.zeros(0)    

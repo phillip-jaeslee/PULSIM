@@ -150,8 +150,10 @@ def _rf_panels(time, rf, phase, n_frames):
     """Line up the RF traces with the trajectory.
  
     A trajectory has one frame per RF step PLUS the starting frame, so the
-    RF arrays are one shorter than M_traj. Prepending the first sample at
-    t = 0 keeps every index meaning the same instant in both.
+    RF arrays are one shorter than M_traj. Frame j is the state after j
+    steps -- the instant step j begins, time[j] -- and the last frame is one
+    step past the last sample. Appending that end time (and repeating the
+    last RF sample) keeps every index meaning the same instant in both.
     """
     amp = np.abs(np.asarray(rf))
     pha = np.asarray(phase, dtype=float)
@@ -165,9 +167,11 @@ def _rf_panels(time, rf, phase, n_frames):
         )
  
     if len(t) == n_frames - 1:
-        t = np.concatenate([[0.0], t])
-        amp = np.concatenate([[amp[0]], amp])
-        pha = np.concatenate([[pha[0]], pha])
+        step = t[-1] - t[-2] if len(t) > 1 else 0.0
+        t = np.concatenate([t, [t[-1] + step]])
+        amp = np.concatenate([amp, [amp[-1]]])
+        pha = np.concatenate([pha, [pha[-1]]])
+        
     elif len(t) != n_frames:
         raise ValueError(
             f"time has {len(t)} points but the trajectory has {n_frames} frames "

@@ -93,3 +93,12 @@ def test_container_behaviour():
     assert seq.append(a) is seq                       # chainable
     seq.append(b)
     assert len(seq) == 2 and seq[0] is a and list(seq) == [a, b]
+
+
+def test_empty_sequence_is_a_no_op():
+    seq = PulseSequence()
+    assert np.array_equal(seq.run(_z(), DF), _z())
+    traj = seq.run(_z(), DF, trajectory=True)
+    assert traj.shape == (1, 3, DF.size)             # len(rf) + 1 frames
+    assert np.array_equal(traj[0], _z())
+    assert seq.rf.size == seq.phase.size == seq.time.size == 0
