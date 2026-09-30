@@ -31,7 +31,8 @@ angle = "y"
 
 def simulate_one_arrow(j, N, t_max_1, t_max_2, t_max_3, angle, Gamma, N_0):
     M = np.tile(M_equilibrium, (N, 1)).T.astype(float)
-    file_path = 'tests/fixtures/waveforms/pulsim_sine.jhl'    M, temp_1, angle_temp_1, N_1 = sim_import_shaped_pulse(M, np.pi/2, angle, t_max_1, file_path, N_0, j, Gamma)
+    file_path = 'tests/fixtures/waveforms/pulsim_sine.jhl'
+    M, temp_1, angle_temp_1, N_1 = sim_import_shaped_pulse(M, np.pi/2, angle, t_max_1, file_path, N_0, j, Gamma)
     M, temp_2, angle_temp_2, N_2 = sim_hard_pulse(M, -np.pi, angle, t_max_2, N_1, int(t_max_2 * 1000), j, Gamma)
     M, temp_3, angle_temp_3, N_3 = sim_import_shaped_pulse(M, np.pi/2, angle, t_max_3, file_path, N_2, j, Gamma)
     RF = np.append(np.append(temp_1, temp_2), temp_3)
