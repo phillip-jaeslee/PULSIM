@@ -16,7 +16,7 @@ parallel case one level up: many independent whole simulations, e.g. a
 parameter sweep. (For several offsets of the same pulse, pass them as
 columns of one M instead -- see tutorial_3d_bloch_animation.py.)
 
-joblib is an optional dependency:  pip install ".[parallel] from a PULSIM clone"
+joblib is an optional dependency:  pip install ".[parallel] from a PULSIM clone."
 """
 
 def require_joblib():
