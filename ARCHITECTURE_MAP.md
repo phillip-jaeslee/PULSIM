@@ -145,7 +145,8 @@ tutorial.
 | `PULSIM/` | the package (22 modules) |
 | `tests/` | the pytest suite (27 test files); `golden/` baselines, `fixtures/waveforms/` a synthetic shape file |
 | `tutorials/` | 12 scripts, all runnable from a clean clone (no vendor files) |
-| `PULSIM_colab_oo.ipynb`, `PULSIM_density_colab.ipynb` | the Colab notebooks: Bloch engine and density-matrix engine |
+| `PULSIM_colab.ipynb` | the Colab notebook: one cell of shared helpers (Load), then a Bloch widget and a density-matrix widget |
+| `PULSIM_colab_oo.ipynb`, `PULSIM_density_colab.ipynb` | the earlier two notebooks, superseded by `PULSIM_colab.ipynb` |
 | `docs/PHYSICS_SPECIFICATION.md` | the physics specification |
 | `ROTATION_METHOD.md` | notes on the rotation kernels |
 | `tools/` | `check_reproducible.py` (CI: run every notebook and tutorial), `generate_test_waveforms.py` (the synthetic fixture) |

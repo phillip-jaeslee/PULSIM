@@ -3,12 +3,51 @@
 
 <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=Python&logoColor=white"/> <img src="https://img.shields.io/badge/Google Colab-F9AB00?style=flat-square&logo=Google Colab&logoColor=white"/>
 
-| Notebook | What it does | |
-|---|---|---|
-| **Shaped pulses** | One pulse at a time — excitation profiles, pulse trains, the shape catalogue | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_colab_oo.ipynb) |
-| **Pulse sequences** | Coupled spins and delays — spin echo, INEPT, BIRD, in the density matrix | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_density_colab.ipynb) |
+Try it in the browser, no installation:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/phillip-jaeslee/PULSIM/blob/main/PULSIM_colab.ipynb)
 
 ![](header.png)
+
+## Colab notebook
+
+[`PULSIM_colab.ipynb`](PULSIM_colab.ipynb) is two interactive simulators. Open it
+with the badge above, choose `Runtime` → `Run all`, pick a figure and press **Run**.
+Every run first draws the pulse sequence it simulates, then the result.
+
+**Single spin — Bloch simulator.** A shaped pulse or a back-to-back pulse train
+(any of PULSIM's shapes, or a JCAMP-DX / JEOL `.jhl` / Bruker shape file).
+
+| Figure | Shows |
+|---|---|
+| Excitation profile | Mx, My, Mz, \|Mxy\| against offset, with the RF amplitude and phase |
+| Profile vs time | The profile building up during the pulse: time–offset maps, and a player with the profile beside the RF amplitude and phase played so far |
+| 3D Bloch sphere | Isochromats on the Bloch sphere after each pulse, with an optional animation |
+
+**Multiple spins — density-matrix simulator.** Up to three weakly coupled spins,
+starting from a preset — INEPT, refocused INEPT (separate delays Δ1 and Δ2),
+Hahn echo, BIRD — or *Build your own*, then edited row by row (ideal pulses,
+delays, shaped pulses).
+
+| Figure | Shows |
+|---|---|
+| Product operators | Tr(σA)/Tr(A²) for the operators you name, at one offset |
+| Excitation profile | The same read-out against one spin's offset |
+| Profile vs time | That profile at every step of the sequence, with the browser player |
+| Delay sweep | The read-out against a delay, compared with the analytical curve and optimum for each preset (e.g. Δ = 1/(4J) for INEPT) |
+| 3D Bloch sphere | One spin's vector (⟨Ix⟩, ⟨Iy⟩, ⟨Iz⟩) through the sequence |
+
+Common to both:
+
+* **Default** (single spin) and **Reload preset** (multiple spins) restore the
+  starting example; in the single-spin widget each figure has its own defaults.
+* **TR** on a shaped-pulse row plays that shape time-reversed (e.g. a flip-back
+  E-BURP).
+* **show** (single spin) picks which of Mx, My, Mz, \|Mxy\| are drawn.
+* **figures** saves every figure of the run as PNG (300 dpi), PDF (one
+  multi-page file) or SVG; **save** writes an animation or the time player as
+  GIF or interactive HTML. Both download straight to your computer in Colab.
+* The profile-vs-time player runs in the browser: the data is sent once, so
+  dragging and Play redraw instantly instead of calling back into Python.
 
 ## Installation
 
@@ -202,6 +241,11 @@ See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §9.
       experimental backend; NumPy is the default — see [Backends](#backends))
 * 0.1.0
     * First version of PULSIM
+* Unreleased
+    * The two Colab notebooks are merged into one, `PULSIM_colab.ipynb`: a
+      Bloch widget and a density-matrix widget with presets, a time-resolved
+      excitation profile, delay sweeps checked against theory, time-reversed
+      shapes, and figure / animation export
 
 ## LICENSE
 
