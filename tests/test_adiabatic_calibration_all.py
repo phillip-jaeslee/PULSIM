@@ -21,7 +21,7 @@ SPECIAL = {"hypsec", "sincos", "compositesmoothedchirp"}
 def _adiabatic_names():
     names = []
     for name in sorted(PULSIM.RFShape.available()):
-        if name in ("file", "composite"):
+        if name in ("file", "composite", "varian"):
             continue
         if PULSIM.RFShape.create(name, duration=T_MS, points=100).intent == "adiabatic":
             names.append(name)

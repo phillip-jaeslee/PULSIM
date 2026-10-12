@@ -1556,3 +1556,55 @@ class CompositeCSVShape(FileShape):
         amplitude = np.asarray(df["1"], dtype=float)
         phase = np.zeros_like(amplitude)
         return np.stack([amplitude, phase], axis=1)
+
+class VarianShape(FileShape):
+    name = "varian"
+    """
+    A Varian/Agilent VnmrJ shape file (``*.RF``). Each non-comment line is
+
+        phase(deg)  amplitude  duration_count  [gate]
+
+    Read the way VnmrJ's waveform generator reads it (OpenVnmrJ
+    src/psg/wg.c):
+
+    - Amplitude is relative to the largest amplitude in the file, which is
+      set to full scale. It is converted to the 0..100 % scale Bruker files
+      use, so both formats reach FileShape the same way.
+    - A row with duration_count n becomes n equal steps. A row with
+      duration_count 0 is not a step; it only counts towards the largest
+      amplitude (e.g. pbx.RF uses one to run the pulse below full power).
+    - gate = 0 means the transmitter is off for that row; the row still
+      takes its time.
+
+    A .RF file has no SHAPE_* header, so intent stays None unless the
+    caller passes one.
+    """
+
+    @staticmethod
+    def _read(path):
+        rows = []
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                rows.append([float(v) for v in line.split()])
+
+        full_scale = max(row[1] for row in rows)
+
+        xy = []
+        for row in rows:
+            phase, amplitude = row[0], row[1]
+            count = int(round(row[2])) if len(row) > 2 else 1
+            gate = row[3] if len(row) > 3 else 1.0
+            if gate == 0:
+                amplitude = 0.0
+            amplitude = amplitude / full_scale * 100.0
+            xy.extend([[amplitude, phase]] * count)
+
+        # A one-row file (square.RF) means "constant for the whole pulse".
+        # RFShape needs at least two points, so repeat the row.
+        if len(xy) == 1:
+            xy = xy * 2
+        return xy
+

@@ -40,7 +40,7 @@ BRUKER_MU = 5.929443
 def amplitude_modulated_shapes():
     names = []
     for name in sorted(PULSIM.RFShape.available()):
-        if name in ("file", "composite"):
+        if name in ("file", "composite", "varian"):
             continue
         shape = PULSIM.RFShape.create(name, duration=DURATION, points=POINTS)
         if not np.any(shape.envelope().imag != 0):
@@ -119,7 +119,7 @@ def test_nu1_over_sqrt_q_is_q_independent():
 def phase_modulated_shapes():
     names = []
     for name in sorted(PULSIM.RFShape.available()):
-        if name in ("file", "composite"):
+        if name in ("file", "composite", "varian"):
             continue
         shape = PULSIM.RFShape.create(name, duration=DURATION, points=POINTS)
         if np.any(shape.envelope().imag != 0):

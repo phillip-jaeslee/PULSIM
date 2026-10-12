@@ -77,7 +77,7 @@ def measure(name):
     return record
 
 def main():
-    names = sorted(n for n in PULSIM.RFShape.available() if n not in ("file", "composite"))
+    names = sorted(n for n in PULSIM.RFShape.available() if n not in ("file", "composite", "varian"))
 
     results = {name: measure(name) for name in names}
 
