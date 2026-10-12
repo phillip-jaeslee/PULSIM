@@ -15,7 +15,7 @@ with the badge above, choose `Runtime` → `Run all`, pick a figure and press **
 Every run first draws the pulse sequence it simulates, then the result.
 
 **Single spin — Bloch simulator.** A shaped pulse or a back-to-back pulse train
-(any of PULSIM's shapes, or a JCAMP-DX / JEOL `.jhl` / Bruker shape file).
+(any of PULSIM's shapes, or a Bruker shape file).
 
 | Figure | Shows |
 |---|---|
