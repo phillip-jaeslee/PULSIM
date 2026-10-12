@@ -7,8 +7,8 @@ across resonance offset, twice: with the heteronuclear coupling on
 (J = 92 Hz, a real 1J(NH)) and with it off (J = 0). With J = 0 the pulse only
 rotates Iz into transverse Ix/Iy. With J on, the coupling keeps evolving for
 the whole millisecond the pulse lasts, so part of the transverse I
-magnetization turns into antiphase IxSz/IySz -- a term a hard pulse would
-never create. Here it reaches about 6 % (IySz). The same J evolution during
+magnetization turns into antiphase 2IxSz/2IySz -- a term a hard pulse would
+never create. Here it reaches about 6 % (2IySz). The same J evolution during
 the pulse is what shifts the optimal INEPT delay for finite shaped pulses
 (see tutorial_delay_optimization.py and tutorial_inept_shaped.py).
 """
@@ -49,7 +49,9 @@ def run(sigma0, off_hz, J, keys):
     return ops.readout(seq.propagate(sigma0), keys)
 
 Iz0 = embed(Iz(), 0 , 2)
-keys = ['Ix', 'Iy', 'Iz', 'IxSz', 'IySz', 'IzSz']
+keys = ['Ix', 'Iy', 'Iz', '2IxSz', '2IySz', '2IzSz']
+TEX = {'Ix': r'$I_x$', 'Iy': r'$I_y$', 'Iz': r'$I_z$',
+       '2IxSz': r'$2I_xS_z$', '2IySz': r'$2I_yS_z$', '2IzSz': r'$2I_zS_z$'}
 with_J = {k: np.zeros(N) for k in keys}
 no_J = {k: np.zeros(N) for k in keys}
 
@@ -66,7 +68,7 @@ fig.set_size_inches(11, 4.5, forward=True)
 
 ax[0].axhline(y=0, color='lightgray', linestyle='-')
 for k, color in zip(keys, ['red', 'blue', 'green', 'orange', 'cyan', 'olive']):
-    ax[0].plot(W_hz, with_J[k], '-', color=color, label=k)
+    ax[0].plot(W_hz, with_J[k], '-', color=color, label=TEX[k])
 ax[0].set_title(f'Single 90x EBURP1, WITH J={J_HZ:.0f} Hz')
 ax[0].set_xlabel('offset (Hz)')
 ax[0].legend(fontsize=9)
@@ -74,7 +76,7 @@ ax[0].invert_xaxis()
 
 ax[1].axhline(y=0, color='lightgray', linestyle='-')
 for k, color in zip(keys, ['red', 'blue', 'green', 'orange', 'cyan', 'olive']):
-    ax[1].plot(W_hz, no_J[k], '-', color=color, label=k)
+    ax[1].plot(W_hz, no_J[k], '-', color=color, label=TEX[k])
 ax[1].set_title('Same pulse, J = 0 (idealized, coupling-free)')
 ax[1].set_xlabel('offset (Hz)')
 ax[1].legend(fontsize=9)
@@ -82,5 +84,5 @@ ax[1].legend(fontsize=9)
 plt.savefig("tutorial_figures/tutorial_single_shaped_EBURP1.png")
 plt.show()
 
-print(f"On-resonance: with J, IxSz={with_J['IxSz'][N//2]:.4f}; "
-      f"with J=0, IxSz={no_J['IxSz'][N//2]:.4f} (should be ~0)")
+print(f"On-resonance: with J, 2IxSz={with_J['2IxSz'][N//2]:.4f}; "
+      f"with J=0, 2IxSz={no_J['2IxSz'][N//2]:.4f} (should be ~0)")

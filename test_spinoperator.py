@@ -9,4 +9,4 @@ ops = SpinOperators(spin_system=ss)
 
 sigma = product_operator(Iz(), 0, Iz(), 1, 2)
 
-print(ops.readout(sigma, ['Ix', 'Iy', 'Iz', 'IzSz']))
+print(ops.readout(sigma, ['Ix', 'Iy', 'Iz', '2IzSz']))

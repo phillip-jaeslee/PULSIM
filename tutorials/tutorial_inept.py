@@ -57,7 +57,7 @@ def run_inept(Delta, off_I=0.0, off_S=0.0, refocus=True):
     sigma_final = build_inept(Delta, off_I, off_S, refocus).propagate(embed(Iz(), 0, 2))
     ops = SpinOperators(spin_system=ss)
 
-    return ops.readout(sigma_final, ['IzSy'])['IzSy']
+    return ops.readout(sigma_final, ['2IzSy'])['2IzSy']
 
 def antiphase_S_amplitude(sigma):
     """Coefficient of 2*Iz(I)*Iy(S) -- the antiphase S-spin coherence

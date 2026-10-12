@@ -11,7 +11,7 @@ independent of how far off-resonance either proton sits.
 This sweeps a shared proton offset (I and I' moved off the pulse carrier
 together) and reads out, at each offset, the full product-operator basis
 relevant to each spin: for I (spin 0, coupled to S via J_CH), Ix/Iy/Iz and
-its cross terms with S (IxSz, IySz, IzSz); for I' (spin 1, coupled instead
+its cross terms with S (2IxSz, 2IySz, 2IzSz); for I' (spin 1, coupled instead
 to I via the homonuclear J_HH), I'x/I'y/I'z and its cross terms with I.
 
 With PULSIM's IdealPulse hard pulses (effectively instantaneous -- default
@@ -96,9 +96,9 @@ def extract_I(sigma):
     name_ops = [('Ix', embed(Ix(), 0, N_SPINS)),
                 ('Iy', embed(Iy(), 0, N_SPINS)),
                 ('Iz', embed(Iz(), 0, N_SPINS)),
-                ('IxSz', product_operator(Ix(), 0, Iz(), 2, N_SPINS)),
-                ('IySz', product_operator(Iy(), 0, Iz(), 2, N_SPINS)),
-                ('IzSz', product_operator(Iz(), 0, Iz(), 2, N_SPINS)),
+                ('2IxSz', product_operator(Ix(), 0, Iz(), 2, N_SPINS)),
+                ('2IySz', product_operator(Iy(), 0, Iz(), 2, N_SPINS)),
+                ('2IzSz', product_operator(Iz(), 0, Iz(), 2, N_SPINS)),
     ]
     return {name: np.trace(sigma @ A).real / np.trace(A @ A).real for name, A in name_ops}
 
@@ -108,18 +108,22 @@ def extract_Ip(sigma):
     name_ops = [("I'x",   embed(Ix(), 1, N_SPINS)),
                 ("I'y",   embed(Iy(), 1, N_SPINS)),
                 ("I'z",   embed(Iz(), 1, N_SPINS)),
-                ("I'xIz", product_operator(Ix(), 1, Iz(), 0, N_SPINS)),
-                ("I'yIz", product_operator(Iy(), 1, Iz(), 0, N_SPINS)),
-                ("I'zIz", product_operator(Iz(), 1, Iz(), 0, N_SPINS))]
+                ("2I'xIz", product_operator(Ix(), 1, Iz(), 0, N_SPINS)),
+                ("2I'yIz", product_operator(Iy(), 1, Iz(), 0, N_SPINS)),
+                ("2I'zIz", product_operator(Iz(), 1, Iz(), 0, N_SPINS))]
     return {name: np.trace(sigma @ A).real / np.trace(A @ A).real for name, A in name_ops}
 
 Iz0_I = embed(Iz(), 0, N_SPINS)
 Iz0_Ip = embed(Iz(), 1, N_SPINS)
 
-#keys_I  = ['Ix', 'Iy', 'Iz', 'IxSz', 'IySz', 'IzSz']
-#keys_Ip = ["I'x", "I'y", "I'z", "I'xIz", "I'yIz", "I'zIz"]
+#keys_I  = ['Ix', 'Iy', 'Iz', '2IxSz', '2IySz', '2IzSz']
+#keys_Ip = ["I'x", "I'y", "I'z", "2I'xIz", "2I'yIz", "2I'zIz"]
 keys_I = ['Iz']
 keys_Ip = ["I'z"]
+TEX = {'Ix': r'$I_x$', 'Iy': r'$I_y$', 'Iz': r'$I_z$',
+       '2IxSz': r'$2I_xS_z$', '2IySz': r'$2I_yS_z$', '2IzSz': r'$2I_zS_z$',
+       "I'x": r"$I'_x$", "I'y": r"$I'_y$", "I'z": r"$I'_z$",
+       "2I'xIz": r"$2I'_xI_z$", "2I'yIz": r"$2I'_yI_z$", "2I'zIz": r"$2I'_zI_z$"}
 profile_I  = {k: np.zeros(N) for k in keys_I}
 profile_Ip = {k: np.zeros(N) for k in keys_Ip}
 
@@ -136,7 +140,7 @@ fig.set_size_inches(11, 4.5, forward=True)
 
 ax[0].axhline(y=0, color='lightgray', linestyle='--')
 for k, color in zip(keys_I, ['red', 'blue', 'green', 'orange', 'cyan', 'olive']):
-    ax[0].plot(W_hz, profile_I[k], '--', color=color, label=k)
+    ax[0].plot(W_hz, profile_I[k], '--', color=color, label=TEX[k])
 ax[0].set_title(f'I (S-attached, J_CH={J_CH:.0f} Hz) after BIRD')
 ax[0].set_xlabel('offset (Hz)')
 ax[0].legend(fontsize=9)
@@ -144,7 +148,7 @@ ax[0].invert_xaxis()
 
 ax[1].axhline(y=0, color='lightgray', linestyle='--')
 for k, color in zip(keys_Ip, ['red', 'blue', 'green', 'orange', 'cyan', 'olive']):
-    ax[1].plot(W_hz, profile_Ip[k], '--', color=color, label=k)
+    ax[1].plot(W_hz, profile_Ip[k], '--', color=color, label=TEX[k])
 ax[1].set_title(f"I' (not attached, J_HH={J_HH:.0f} Hz) after BIRD")
 ax[1].set_xlabel('offset (Hz)')
 ax[1].legend(fontsize=9)

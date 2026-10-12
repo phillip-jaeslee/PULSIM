@@ -79,9 +79,9 @@ def run(pulse, off_hz):
 
 
 OPS = {'Ix': embed(Ix(), 0, 2), 'Iy': embed(Iy(), 0, 2), 'Iz': embed(Iz(), 0, 2),
-       'IxSz': product_operator(Ix(), 0, Iz(), 1, 2),
-       'IySz': product_operator(Iy(), 0, Iz(), 1, 2),
-       'IzSz': product_operator(Iz(), 0, Iz(), 1, 2)}
+       '2IxSz': product_operator(Ix(), 0, Iz(), 1, 2),
+       '2IySz': product_operator(Iy(), 0, Iz(), 1, 2),
+       '2IzSz': product_operator(Iz(), 0, Iz(), 1, 2)}
 
 
 def extract(sigma):
@@ -89,6 +89,8 @@ def extract(sigma):
 
 
 keys = list(OPS)
+TEX = {'Ix': r'$I_x$', 'Iy': r'$I_y$', 'Iz': r'$I_z$',
+       '2IxSz': r'$2I_xS_z$', '2IySz': r'$2I_yS_z$', '2IzSz': r'$2I_zS_z$'}
 res_a = {k: np.zeros(N) for k in keys}
 res_f = {k: np.zeros(N) for k in keys}
 for n, off in enumerate(W_hz):
@@ -105,7 +107,7 @@ fig.set_size_inches(11, 4.5, forward=True)
 
 ax[0].axhline(y=0, color='lightgray', linestyle='-')
 for k, c in zip(keys, colors):
-    ax[0].plot(W_hz, res_a[k], '-', color=c, label=f"{k} analytic")
+    ax[0].plot(W_hz, res_a[k], '-', color=c, label=f"{TEX[k]} analytic")
     ax[0].plot(W_hz[::10], res_f[k][::10], 'o', color=c, markersize=3)
 ax[0].set_title(f'90x GaussCascadeQ5, J = {J_HZ:.0f} Hz: analytic (lines), file (dots)')
 ax[0].set_xlabel('offset (Hz)')
@@ -113,7 +115,7 @@ ax[0].legend(fontsize=8)
 ax[0].invert_xaxis()
 
 for k, c in zip(keys, colors):
-    ax[1].plot(W_hz, res_f[k] - res_a[k], '-', color=c, label=k)
+    ax[1].plot(W_hz, res_f[k] - res_a[k], '-', color=c, label=TEX[k])
 ax[1].set_title('file - analytic (import error only)')
 ax[1].set_xlabel('offset (Hz)')
 ax[1].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))

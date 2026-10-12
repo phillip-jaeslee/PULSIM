@@ -137,9 +137,9 @@ def test_multi_spin_operator_rate_is_the_sum_of_its_factors():
     ss, ops = _two_spins(J=0.0)
     sigma = LiouvilleSequence([Delay(t)], ss,
                               relaxation=Relaxation(T1=T1, T2=T2, M0=0.0)
-                              ).propagate(ops["IzSy"].astype(complex))
+                              ).propagate(ops["2IzSy"].astype(complex))
     want = np.exp(-t * (1.0 / T1 + 1.0 / T2))
-    assert ops.expectation(sigma, "IzSy") == pytest.approx(want, abs=1e-12)
+    assert ops.expectation(sigma, "2IzSy") == pytest.approx(want, abs=1e-12)
 
 
 def test_identity_component_is_untouched_so_trace_is_preserved():

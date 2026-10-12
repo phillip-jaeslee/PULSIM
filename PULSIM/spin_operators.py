@@ -1,3 +1,5 @@
+import re
+import warnings
 import numpy as np
 from functools import reduce
 
@@ -31,9 +33,13 @@ class SpinOperators:
 
         ops = SpinOperators(spin_system)
         ops['Ix']       # embed(Ix(), 0, n) -- x operator on spin 0 ("I")
-        ops['IxSz']     # 2 * embed(Ix(),0,n) @ embed(Iz(),1,n) -- matches product_operator()
-        ops.expectation(sigma, 'IxSz')                   # Tr(sigma A)/Tr(A A)
-        ops.readout(sigma, ['Ix','Iy','Iz','IxSz','IySz','IzSz'])   # -> dict
+        ops['2IxSz']    # 2 * embed(Ix(),0,n) @ embed(Iz(),1,n) -- matches product_operator()
+        ops['IxSz']     # same matrix; notes that it is calculated as '2IxSz'
+        ops.expectation(sigma, '2IxSz')                  # Tr(sigma A)/Tr(A A)
+        ops.readout(sigma, ['Ix','Iy','Iz','2IxSz','2IySz','2IzSz'])   # -> dict
+
+    The leading coefficient is optional but, if given, must equal 2**(k-1)
+    for a k-spin product (none or 1 for one spin, 2 for two, 4 for three).
 
     Labels default to I, S, K, L, M, N for spin 0, 1, 2, ...; pass
     labels=[...] explicitly for >6 spins or a different naming scheme.
@@ -60,6 +66,14 @@ class SpinOperators:
         self._label_to_index = {lab: i for i, lab in enumerate(self.labels)} # print: {'I': 0, 'S': 1}
         self._cache = {}
 
+    @staticmethod
+    def _split_coefficient(name):
+        """'2IxSz' -> (2, 'IxSz'); 'IxSz' -> (None, 'IxSz')."""
+        m = re.match(r'\d+', name)
+        if m is None:
+            return None, name
+        return int(m.group()), name[m.end():]
+
     def _parse(self, name):
         """'IxSz' -> [(0, 'x'), (1, 'z')]."""
         terms = []
@@ -84,8 +98,20 @@ class SpinOperators:
 
     def __getitem__(self, name):
         if name not in self._cache:
-            terms = self._parse(name)
+            coef, body = self._split_coefficient(name)
+            terms = self._parse(body)
             factor = 2 ** (len(terms) - 1)
+            if coef is None:
+                if factor > 1:
+                    warnings.warn(
+                        f"{name!r} is calculated as '{factor}{body}' "
+                        f"(a {len(terms)}-spin product carries a factor of {factor})",
+                        stacklevel=2,
+                    )
+            elif coef != factor:
+                raise ValueError(
+                    f"{name!r}: a {len(terms)}-spin product has coefficient {factor}, got {coef}"
+                )
             op = None
             for idx, axis in terms:
                 single = embed(_AXES[axis](), idx, self.n)
