@@ -31,7 +31,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from .liouville import Delay, IdealPulse, ShapePulseSegment, RawShapedPulseSegment
+from .liouville import Delay, IdealPulse, ShapePulseSegment, RawShapedPulseSegment, _axis_phase
 
 __all__ = ["draw_sequence", "describe_sequence"]
 
@@ -65,6 +65,7 @@ def describe_sequence(sequence):
             rf = np.asarray(seg.pulse.calibrated_rf())
             out.append(_item("shaped", seg.pulse.shape.duration, ss.channel(seg.pulse.Gamma),
                              env=rf, flip=seg.pulse.flip,
+                             phase=_axis_phase(seg.pulse.axis),
                              name=getattr(seg.pulse.shape, "name", None)))
         elif isinstance(seg, RawShapedPulseSegment):
             rf = np.asarray(seg.rf)
@@ -219,7 +220,9 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
                 ax.fill_between(t, y, y + 0.5 * H180 * a * sgn, facecolor="0.62", edgecolor="0.15", lw=0.9, zorder=3)
                 if annotate:
                     name = it.get("name") or "shaped"
-                    lab = name if it["flip"] is None else f"{name}  {np.degrees(it['flip']):.0f}$^\\circ$"
+                    ph = _phase_label(it["phase"])
+                    lab = (f"{name}$_{{{ph}}}$" if it["flip"] is None    # adiabatic: no flip angle
+                           else f"{name}  {np.degrees(it['flip']):.0f}$^\\circ_{{{ph}}}$")
                     ax.text(x0 + w / 2, y + _LABEL_DY, lab,
                             ha="center", va="bottom", fontsize=9)
 
