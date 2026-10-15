@@ -236,7 +236,8 @@ def plot_3D_arrow_with_pulse(M_traj, time, rf, phase, color="viridis",
         ax.set_ylabel(label, **font)
         ax.set_xlabel(f"Time ({time_unit})", **font)
     ax_amp.set_ylim(*_amp_limits(amp))
-    ax_pha.set_yticks(np.arange(0, 361, 90))
+    ax_pha.set_ylim(-5, 365)
+    ax_pha.set_yticks(np.arange(0, 361, 60))
  
     def update(frame):
         ax3d.cla()
@@ -312,7 +313,8 @@ def plot_3D_arrow_snapshots(M_traj, time, rf, phase, frames, labels=None,
     ax_pha.plot(t, pha, color='tab:blue', linewidth=0.9, alpha=0.55)
     ax_pha.set_ylabel("Phase (deg)", color='tab:blue', **font)
     ax_pha.tick_params(axis='y', labelcolor='tab:blue')
-    ax_pha.set_yticks(np.arange(0, 361, 90))
+    ax_pha.set_ylim(-5, 365)
+    ax_pha.set_yticks(np.arange(0, 361, 60))
  
     # Markers carry only the snapshot's NUMBER, matched by the "1." .. "n."
     # prefix on each sphere's title. Writing the full label here instead
