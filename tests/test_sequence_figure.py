@@ -93,11 +93,27 @@ def test_to_scale_axis_is_the_real_time_axis():
 def test_the_minimum_width_is_reported_not_hidden():
     """An ideal pulse is drawn wider than it is, because its true duration is
     zero. draw_sequence prints a note saying so; this asserts the note has
-    something to report."""
+    something to report -- and that the widening does not stretch the time
+    axis: the total is still the real duration."""
     events = _group_simultaneous(describe_sequence(inept()))
     _, total, faked = _layout(events, to_scale=True, min_pulse_frac=0.012)
     assert faked, "ideal pulses were widened, so the caller must be told"
-    assert total > sum(e["duration"] for e in events)
+    assert total == pytest.approx(sum(e["duration"] for e in events), abs=1e-12)
+
+
+def test_to_scale_items_start_at_their_real_time():
+    """A widened ideal pulse is centred ON its instant and pushes nothing
+    later, so every item still starts at its true time -- the drawing can share
+    an x axis with a trace plotted against time."""
+    events = _group_simultaneous(describe_sequence(inept()))
+    positions, _, faked = _layout(events, to_scale=True, min_pulse_frac=0.012)
+    t = 0.0
+    for i, (e, (x0, w)) in enumerate(zip(events, positions)):
+        if i in faked:
+            assert x0 + w / 2 == pytest.approx(t + e["duration"] / 2, abs=1e-12)
+        else:
+            assert x0 == pytest.approx(t, abs=1e-12)
+        t += e["duration"]
 
 
 def test_the_shaped_pulse_outlasts_the_delay():

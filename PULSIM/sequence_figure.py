@@ -137,18 +137,25 @@ def _attach_to_shaped(items):
 def _layout(items, to_scale, min_pulse_frac):
     """Assign each item an x position and a drawn width"""
     if to_scale:
-        widths = [it["duration"] for it in items]
-        total = sum(widths) or 1.0
-        floor = min_pulse_frac * total
-        # An ideal pulse has NO duration by construction. Drawing it at its
-        # true width would make it invisible, so it gets a floor -- and the
-        # caller is told, because a diagram that silently fakes a width is
-        # worse than one that admits it.
-        faked = []
+        # Real time: every item starts at its true time and takes up only its
+        # true duration. An ideal pulse has NO duration, so at its true width it
+        # would be invisible: it is drawn min_pulse_frac of the total wide,
+        # CENTRED on its instant, without pushing anything after it later -- the
+        # axis stays the time axis. The caller is still told it was widened,
+        # because a diagram that silently fakes a width is worse than one that
+        # admits it.
+        total = sum(it["duration"] for it in items)
+        floor = min_pulse_frac * (total or 1.0)
+        t, positions, faked = 0.0, [], []
         for i, it in enumerate(items):
-            if it["kind"] == "ideal" and widths[i] < floor:
-                widths[i] = floor
+            d = it["duration"]
+            if it["kind"] == "ideal" and d < floor:
+                positions.append((t + 0.5 * d - 0.5 * floor, floor))
                 faked.append(i)
+            else:
+                positions.append((t, d))
+            t += d
+        return positions, t, faked
 
     else:
         # a zero-length delay takes no room (the widget uses one as a place-holder
