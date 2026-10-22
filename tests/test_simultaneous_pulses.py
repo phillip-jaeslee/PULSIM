@@ -59,8 +59,9 @@ def test_one_pulse_alone_is_a_shape_pulse_segment():
 
 @pytest.mark.parametrize("align, c_alone", [
     ("center", lambda pC: [Delay(0.3), ShapePulseSegment(pC), Delay(0.3)]),
-    ("start",  lambda pC: [ShapePulseSegment(pC), Delay(0.6)]),
-])
+    ("left",   lambda pC: [ShapePulseSegment(pC), Delay(0.6)]),
+    ("right",  lambda pC: [Delay(0.6), ShapePulseSegment(pC)]),
+  ])
 def test_without_coupling_each_spin_evolves_on_its_own(align, c_alone):
     pH = pulse("eburp1", "H", 90, 1.0, 200, "x")
     pC = pulse("hermite", "13C", 180, 0.4, 97, "y")          # shorter, off-grid

@@ -244,8 +244,11 @@ class SimultaneousPulses(Segment):
     RF field is in the same Hamiltonian at every instant, as on a spectrometer.
 
     pulses : Pulse objects, each on a different channel (different Gamma).
-    align  : "center" (default) or "start" -- where a shorter pulse sits
-             inside the longest one. A channel is off outside its pulse.
+    align  : "left", "center" (default) or "right" -- where a shorter pulse
+             sits inside the longest one: starts together, centres together
+             (e.g. a 180 pair), or ends together (e.g. INEPT's last 90 pair,
+             so both channels finish at the same instant). A channel is off
+             outside its pulse.
 
     The segment lasts as long as its longest pulse. Each pulse stays
     piecewise constant over its own samples: the time grid is the union of
@@ -261,17 +264,18 @@ class SimultaneousPulses(Segment):
         if any(abs(a - b) < 1e-6 for i, a in enumerate(gammas) for b in gammas[i + 1:]):
             raise ValueError("SimultaneousPulses: two pulses share a channel -- pulses on "
                              "one channel run one after the other; use separate segments")
-        if align not in ("center", "start"):
-            raise ValueError(f"align must be 'center' or 'start', got {align!r}")
+        if align not in ("left", "center", "right"):
+            raise ValueError(f"align must be 'left', 'center' or 'right', got {align!r}")
         self.align = align
 
     @property
     def duration(self):
         return max(p.shape.duration for p in self.pulses)
-
+    
     def _start(self, p):
-        """When pulse p switches on, inside duration [0, duration]."""
-        return 0.5 * (self.duration - p.shape.duration) if self.align == "center" else 0.0
+        """When pulse p switches on, inside [0, duration]."""
+        free = self.duration - p.shape.duration
+        return {"left": 0.0, "center": 0.5 * free, "right": free}[self.align]
 
     def hamiltonians(self, spin_system):
         n_spins = spin_system.n_spins
