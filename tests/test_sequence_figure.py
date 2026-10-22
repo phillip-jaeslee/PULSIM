@@ -139,3 +139,14 @@ def test_raw_shaped_segment_reports_channels():
     assert item["channels"] == (0,)
     assert item["duration"] == pytest.approx(1.5)
     draw_sequence(seq, to_scale=True)     # the KeyError was here, not above
+
+def test_a_zero_length_delay_takes_no_room():
+    """The Colab widget keeps one segment per row by putting Delay(0.0)
+    place-holders after a SimultaneousPulses segment; they must not open an
+    empty slot in the textbook drawing."""
+    ss = SpinSystem(nuclei=["H"], offsets=[0.0])
+    seq = LiouvilleSequence([IdealPulse(np.pi / 2, channel="H"), Delay(0.0),
+                             IdealPulse(np.pi, channel="H")], ss)
+    positions, total, _ = _layout(_group_simultaneous(describe_sequence(seq)), False, 0.012)
+    assert positions[1][1] == 0.0
+    assert total == pytest.approx(2 * 0.7)

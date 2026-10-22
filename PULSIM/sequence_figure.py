@@ -151,7 +151,10 @@ def _layout(items, to_scale, min_pulse_frac):
                 faked.append(i)
 
     else:
-        widths = [{"delay": 2.6, "ideal": 0.7, "shaped": 1.4}[it["kind"]] for it in items]
+        # a zero-length delay takes no room (the widget uses one as a place-holder
+        # for a pulse that plays inside a SimultaneousPulses segment)
+        widths = [0.0 if it["kind"] == "delay" and it["duration"] == 0 else
+                  {"delay": 2.6, "ideal": 0.7, "shaped": 1.4}[it["kind"]] for it in items]
         faked = []
 
     x, positions = 0.0, []
