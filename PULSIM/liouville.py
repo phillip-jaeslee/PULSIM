@@ -234,3 +234,72 @@ class RawShapedPulseSegment(Segment):
 
         for w in self.rf:
             yield H0 + w.real * SX + w.imag * SY, self.dt
+
+class SimultaneousPulses(Segment):
+    """Finite pulses on different channels, played at the same time.
+
+    Back-to-back ShapePulseSegments run one after the other, each with the
+    full offset + J Hamiltonian: the pair then lasts the SUM of both durations,
+    and each spin free-evolves while the other channel is pulsed. Here every
+    RF field is in the same Hamiltonian at every instant, as on a spectrometer.
+
+    pulses : Pulse objects, each on a different channel (different Gamma).
+    align  : "center" (default) or "start" -- where a shorter pulse sits
+             inside the longest one. A channel is off outside its pulse.
+
+    The segment lasts as long as its longest pulse. Each pulse stays
+    piecewise constant over its own samples: the time grid is the union of
+    every pulse's sample boundaries, so no sample is resampled or split
+    unevenly, and the result is exact for piecewise-constant RF.
+    """
+
+    def __init__(self, pulses, align="center"):
+        self.pulses = list(pulses)
+        if len(self.pulses) < 1:
+            raise ValueError("SimultaneousPulses need at least one pulse")
+        gammas = [p.Gamma for p in self.pulses]
+        if any(abs(a - b) < 1e-6 for i, a in enumerate(gammas) for b in gammas[i + 1:]):
+            raise ValueError("SimultaneousPulses: two pulses share a channel -- pulses on "
+                             "one channel run one after the other; use separate segments")
+        if align not in ("center", "start"):
+            raise ValueError(f"align must be 'center' or 'start', got {align!r}")
+        self.align = align
+
+    @property
+    def duration(self):
+        return max(p.shape.duration for p in self.pulses)
+
+    def _start(self, p):
+        """When pulse p switches on, inside duration [0, duration]."""
+        return 0.5 * (self.duration - p.shape.duration) if self.align == "center" else 0.0
+
+    def hamiltonians(self, spin_system):
+        n_spins = spin_system.n_spins
+        H0 = _static_hamiltonian(spin_system)
+        T = self.duration
+
+        # time grid: every pulse's sample boundaries, merged
+        edges = [0.0, T]
+        for p in self.pulses:
+            t0, n =self._start(p), len(p.calibrated_rf())
+            edges.extend(t0 + p.shape.dt * np.arange(n + 1))
+        edges = np.unique(np.round(np.asarray(edges), 12))
+        edges = edges[(edges >= 0.0) & (edges <= T)]
+
+        mids, steps = 0.5 * (edges[:-1] + edges[1:]), np.diff(edges)
+        H = np.repeat(H0[None, :, :], len(steps), axis=0)
+        for p in self.pulses:
+            rf = p.calibrated_rf() * np.exp(1j * _axis_phase(p.axis))
+            k = np.floor((mids - self._start(p)) / p.shape.dt).astype(int)
+            on = (k >= 0) & (k < len(rf))
+            w = np.zeros(len(steps), dtype=complex)
+            w[on] = rf[k[on]]
+            targets = spin_system.channel(p.Gamma)
+            SX = sum(embed(Ix(), i, n_spins) for i in targets)
+            SY = sum(embed(Iy(), i, n_spins) for i in targets)
+            H = H + 2 * np.pi * p.Gamma * (w.real[:, None, None] * SX + w.imag[:, None, None] * SY)
+
+        for Hk, dt in zip(H, steps):
+            if dt > 0:
+                yield Hk, dt
+    

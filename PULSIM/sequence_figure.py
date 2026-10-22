@@ -31,7 +31,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from .liouville import Delay, IdealPulse, ShapePulseSegment, RawShapedPulseSegment, _axis_phase
+from .liouville import Delay, IdealPulse, ShapePulseSegment, RawShapedPulseSegment, SimultaneousPulses, _axis_phase
 
 __all__ = ["draw_sequence", "describe_sequence"]
 
@@ -70,6 +70,16 @@ def describe_sequence(sequence):
         elif isinstance(seg, RawShapedPulseSegment):
             rf = np.asarray(seg.rf)
             out.append(_item("shaped", len(rf) * seg.dt, ss.channel(seg.channel), env=rf))
+        elif isinstance(seg, SimultaneousPulses):
+            # one event on several channels: each pulse keeps its own envelope,
+            # label, and place (start, duration) inside the segment
+            subs = [dict(channels=tuple(ss.channel(p.Gamma)),
+                         env=np.asarray(p.calibrated_rf()), flip=p.flip,
+                         phase=_axis_phase(p.axis), name=getattr(p.shape, "name", None),
+                         start=seg._start(p), duration=p.shape.duration) for p in seg.pulses]
+            it = _item("shaped", seg.duration, sorted({c for sb in subs for c in sb["channels"]}))
+            it["subs"] = subs
+            out.append(it)
         else:
             raise TypeError(
                 f"draw_sequence does not know how to draw {type(seg).__name__}. "
@@ -173,6 +183,22 @@ def _draw_ideal_pulse(ax, xc, w_slot, sub, y, annotate):
                 f"{np.degrees(sub['flip']):.0f}$^\\circ_{{{_phase_label(sub['phase'])}}}$",
                 ha="center", va="bottom", fontsize=9)
 
+def _draw_shaped_pulse(ax, x0, w, sub, y, annotate):
+    """Draw one shaped envelope from x0 to x0 + w on the channel line at y."""
+    env = sub["env"]
+    a = np.abs(env)
+    a = a / (a.max() or 1.0)
+    sgn = np.sign(np.real(env))
+    sgn[sgn == 0] = 1.0
+    t = x0 + np.linspace(0, w, len(env))
+    ax.fill_between(t, y, y + 0.5 * H180 * a * sgn, facecolor="0.62", edgecolor="0.15", lw=0.9, zorder=3)
+    if annotate:
+        name = sub.get("name") or "shaped"
+        ph = _phase_label(sub["phase"])
+        lab = (f"{name}$_{{{ph}}}$" if sub["flip"] is None    # adiabatic: no flip angle
+               else f"{name}  {np.degrees(sub['flip']):.0f}$^\\circ_{{{ph}}}$")
+        ax.text(x0 + w / 2, y + _LABEL_DY, lab, ha="center", va="bottom", fontsize=9)
+
 def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0.012, annotate=True):
     """Draw `sequence` (a LiouvilleSequence) as a pulse-sequence diagram.
  
@@ -206,25 +232,13 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
                     _draw_ideal_pulse(ax, x0 + w / 2, w, sub, ys[ci], annotate)
             continue
  
-        for ci in it["channels"]:
-            y = ys[ci]
-            if it["kind"] == "ideal":
-                continue    # drawn below, per sub-pulse, so a group shares one x
-            else:
-                env = it["env"]
-                a = np.abs(env)
-                a = a / (a.max() or 1.0)
-                sgn = np.sign(np.real(env))
-                sgn[sgn == 0] = 1.0
-                t = x0 + np.linspace(0, w, len(env))
-                ax.fill_between(t, y, y + 0.5 * H180 * a * sgn, facecolor="0.62", edgecolor="0.15", lw=0.9, zorder=3)
-                if annotate:
-                    name = it.get("name") or "shaped"
-                    ph = _phase_label(it["phase"])
-                    lab = (f"{name}$_{{{ph}}}$" if it["flip"] is None    # adiabatic: no flip angle
-                           else f"{name}  {np.degrees(it['flip']):.0f}$^\\circ_{{{ph}}}$")
-                    ax.text(x0 + w / 2, y + _LABEL_DY, lab,
-                            ha="center", va="bottom", fontsize=9)
+        # a shaped pulse, or several played together (SimultaneousPulses): each
+        # on its own channel line, at its own place inside the slot
+        T = it["duration"] or 1.0
+        for sub in it.get("subs") or [dict(it, start=0.0, duration=T)]:
+            xs, ws = x0 + w * sub["start"] / T, w * sub["duration"] / T
+            for ci in sub["channels"]:
+                _draw_shaped_pulse(ax, xs, ws, sub, ys[ci], annotate)
 
         for sub in it.get("attached") or ():
             xc = x0 + w if it.get("attach_at") == "end" else x0
