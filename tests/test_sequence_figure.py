@@ -166,3 +166,15 @@ def test_a_zero_length_delay_takes_no_room():
     positions, total, _ = _layout(_group_simultaneous(describe_sequence(seq)), False, 0.012)
     assert positions[1][1] == 0.0
     assert total == pytest.approx(2 * 0.7)
+
+def test_negative_gamma_pulses_are_drawn_upright():
+    """15N has a negative gamma, so its calibrated B1 is negative; the
+    diagram draws the nutation (gamma * B1) instead, so a 15N pulse points up
+    like a 1H pulse."""
+    ss = SpinSystem(nuclei=["H", "15N"], offsets=[0.0, 0.0])
+    seq = LiouvilleSequence([
+        ShapePulseSegment(PULSIM.Pulse(PULSIM.RFShape.create("hard", duration=0.08, points=20),
+                                       flip=PI, backend=PULSIM.NumpyBackend(Gamma=gyro_ratio("15N"))))
+    ], ss)
+    (item,) = describe_sequence(seq)
+    assert np.all(np.real(item["env"]) > 0)

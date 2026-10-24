@@ -45,6 +45,14 @@ def _item(kind, duration, channels=(), env=None, flip=None, phase=0.0, name=None
     return dict(kind=kind, duration=float(duration), channels=tuple(channels),
                 env=env, flip=flip, phase=float(phase), name=name)
 
+def _drawn_envelope(pulse):
+    """The envelope to draw: calibrated B1 times the sign of gamma, i.e. the
+    nutation (gamma * B1). B1 itself is negative for a negative-gamma nucleus
+    such as 15N, which would draw every 15N pulse upside down although it
+    nutates the same way; this keeps the schematic positive. The simulation
+    is untouched -- only the picture."""
+    return np.asarray(pulse.calibrated_rf()) * np.sign(pulse.Gamma)
+
 def describe_sequence(sequence):
     """Reduce a LiouvilleSequence to a list of plain dicts.
 
@@ -62,7 +70,7 @@ def describe_sequence(sequence):
             ch = tuple(ss.channel(seg.channel)) if seg.channel is not None else tuple(range(n))
             out.append(_item("ideal", seg.duration, ch, flip=seg.flip, phase=seg.phase))
         elif isinstance(seg, ShapePulseSegment):
-            rf = np.asarray(seg.pulse.calibrated_rf())
+            rf = _drawn_envelope(seg.pulse)
             out.append(_item("shaped", seg.pulse.shape.duration, ss.channel(seg.pulse.Gamma),
                              env=rf, flip=seg.pulse.flip,
                              phase=_axis_phase(seg.pulse.axis),
@@ -74,7 +82,7 @@ def describe_sequence(sequence):
             # one event on several channels: each pulse keeps its own envelope,
             # label, and place (start, duration) inside the segment
             subs = [dict(channels=tuple(ss.channel(p.Gamma)),
-                         env=np.asarray(p.calibrated_rf()), flip=p.flip,
+                         env=_drawn_envelope(p), flip=p.flip,
                          phase=_axis_phase(p.axis), name=getattr(p.shape, "name", None),
                          start=seg._start(p), duration=p.shape.duration) for p in seg.pulses]
             it = _item("shaped", seg.duration, sorted({c for sb in subs for c in sb["channels"]}))
