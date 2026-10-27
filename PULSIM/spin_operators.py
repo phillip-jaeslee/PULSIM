@@ -119,8 +119,17 @@ class SpinOperators:
             self._cache[name] = factor * op
         return self._cache[name]
 
+    # '|Ixy|', '|Sxy|', ...: the transverse magnitude of one spin, sqrt(<Ix>^2 + <Iy>^2)
+    _MAGNITUDE = re.compile(r"\|([A-Za-z]+'?)xy\|")
+
     def expectation(self, sigma, name):
-        """<A> = Tr(sigma A) / Tr (A A)."""
+        """<A> = Tr(sigma A) / Tr (A A). A name like '|Ixy|' gives the transverse
+        magnitude of that spin, sqrt(<Ix>^2 + <Iy>^2)"""
+        m = self._MAGNITUDE.fullmatch(name.replace(" ", ""))
+        if m:
+            label = m.group(1)
+            return float(np.hypot(self.expectation(sigma, label + "x"),
+                                  self.expectation(sigma, label + "y")))
         A = self[name]
         return np.trace(sigma @ A).real / np.trace(A @ A).real
 
