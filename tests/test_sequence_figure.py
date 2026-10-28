@@ -178,3 +178,27 @@ def test_negative_gamma_pulses_are_drawn_upright():
     ], ss)
     (item,) = describe_sequence(seq)
     assert np.all(np.real(item["env"]) > 0)
+
+def test_a_time_reversed_pulse_is_labelled_tr():
+    """time_reversed=True plays the shape backwards; the diagram says so,
+    for a lone shaped pulse and inside a SimultaneousPulses group."""
+    import matplotlib.pyplot as plt
+    from PULSIM.liouville import SimultaneousPulses
+
+    def eb2(ch, tr):
+        return PULSIM.Pulse(PULSIM.RFShape.create("eburp2", duration=1.5, points=64,
+                                                  time_reversed=tr),
+                            flip=PI / 2, backend=PULSIM.NumpyBackend(Gamma=gyro_ratio(ch)))
+    ss = SpinSystem(nuclei=["H", "13C"], offsets=[0.0, 0.0])
+    seq = LiouvilleSequence([ShapePulseSegment(eb2("H", True)), Delay(1.0),
+                             ShapePulseSegment(eb2("H", False)),
+                             SimultaneousPulses([eb2("H", True), eb2("13C", False)])], ss)
+    items = describe_sequence(seq)
+    assert [items[0]["tr"], items[2]["tr"]] == [True, False]
+    assert [s["tr"] for s in items[3]["subs"]] == [True, False]
+
+    fig, ax = plt.subplots()
+    draw_sequence(seq, ax=ax, to_scale=False)
+    labels = [t.get_text() for t in ax.texts]
+    plt.close(fig)
+    assert sum("(tr)" in lab for lab in labels) == 2

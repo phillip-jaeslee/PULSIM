@@ -53,6 +53,10 @@ def _drawn_envelope(pulse):
     is untouched -- only the picture."""
     return np.asarray(pulse.calibrated_rf()) * np.sign(pulse.Gamma)
 
+def _time_reversed(pulse):
+    """True if the pulse's shape is played backwards (time_reversed=True)."""
+    return bool(getattr(pulse.shape, "params", {}).get("time_reversed", False))
+
 def describe_sequence(sequence):
     """Reduce a LiouvilleSequence to a list of plain dicts.
 
@@ -71,10 +75,12 @@ def describe_sequence(sequence):
             out.append(_item("ideal", seg.duration, ch, flip=seg.flip, phase=seg.phase))
         elif isinstance(seg, ShapePulseSegment):
             rf = _drawn_envelope(seg.pulse)
-            out.append(_item("shaped", seg.pulse.shape.duration, ss.channel(seg.pulse.Gamma),
-                             env=rf, flip=seg.pulse.flip,
-                             phase=_axis_phase(seg.pulse.axis),
-                             name=getattr(seg.pulse.shape, "name", None)))
+            it = _item("shaped", seg.pulse.shape.duration, ss.channel(seg.pulse.Gamma),
+                       env=rf, flip=seg.pulse.flip,
+                       phase=_axis_phase(seg.pulse.axis),
+                       name=getattr(seg.pulse.shape, "name", None))
+            it["tr"] = _time_reversed(seg.pulse)
+            out.append(it)
         elif isinstance(seg, RawShapedPulseSegment):
             rf = np.asarray(seg.rf)
             out.append(_item("shaped", len(rf) * seg.dt, ss.channel(seg.channel), env=rf))
@@ -84,6 +90,7 @@ def describe_sequence(sequence):
             subs = [dict(channels=tuple(ss.channel(p.Gamma)),
                          env=_drawn_envelope(p), flip=p.flip,
                          phase=_axis_phase(p.axis), name=getattr(p.shape, "name", None),
+                         tr=_time_reversed(p),
                          start=seg._start(p), duration=p.shape.duration) for p in seg.pulses]
             it = _item("shaped", seg.duration, sorted({c for sb in subs for c in sb["channels"]}))
             it["subs"] = subs
@@ -211,7 +218,7 @@ def _draw_shaped_pulse(ax, x0, w, sub, y, annotate):
     t = x0 + np.linspace(0, w, len(env))
     ax.fill_between(t, y, y + 0.5 * H180 * a * sgn, facecolor="0.62", edgecolor="0.15", lw=0.9, zorder=3)
     if annotate:
-        name = sub.get("name") or "shaped"
+        name = (sub.get("name") or "shaped") + (" (tr)" if sub.get("tr") else "")
         ph = _phase_label(sub["phase"])
         lab = (f"{name}$_{{{ph}}}$" if sub["flip"] is None    # adiabatic: no flip angle
                else f"{name}  {np.degrees(sub['flip']):.0f}$^\\circ_{{{ph}}}$")

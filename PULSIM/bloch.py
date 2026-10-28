@@ -6,6 +6,25 @@ import numpy as np
 # it imports it lazily at call time (see below).
 from .mat_operator import cpu_rot, cpu_rot_batch
 
+# RF phase (radians) for each label -- the same four spellings as
+# liouville._AXIS_PHASE, so one Pulse(axis="-x") runs in both simulators.
+_AXIS_OFFSET = {"x": 0.0, "y": np.pi / 2, "-x": np.pi, "-y": -np.pi / 2}
+
+def _phase_offset(angle, fname):
+    """RF phase in radians for an axis label ("x", "y", "-x", "-y") or a phase
+    already given in radians"""
+    if isinstance(angle, str):
+        if angle in _AXIS_OFFSET:
+            return _AXIS_OFFSET[angle]
+    elif isinstance(angle, (int, float)):
+        return float(angle)
+    raise NotImplementedError(
+        f'{fname}("{angle}") has no verified formula -- "z" was never used '
+        f'anywhere in the codebase and has no independent ground truth to check '
+        f'against. Only "x", "y", "-x" and "-y" (real NMR pulse phases) or a '
+        f'phase in radians are implemented.'        
+    )
+
 def _decay(T, tau):
     """exp(-T/tau), with tau=None meaning infinite -- i.e. no decay.
 
@@ -170,18 +189,7 @@ def bloch_rotate(M_init, T, B, angle, Gamma):
     # Gamma kHz/mT MHz/T
 
     flip = 2 * np.pi * Gamma * np.linalg.norm(B) * T
-    if angle == "x":
-        phi = np.arctan2(B[1], B[0])
-    elif angle == "y":
-        phi = np.arctan2(B[1], B[0]) + np.pi/2
-    elif isinstance(angle, (int, float)):
-        phi = np.arctan2(B[1], B[0]) + float(angle)
-    else:
-        raise NotImplementedError(
-            f'bloch_rotate("{angle}") has no verified formula -- "z" was never used '
-            f'anywhere in the codebase and has no independent ground truth to check '
-            f'against. Only "x" and "y" (real NMR pulse phases) are implemented.'
-        )
+    phi = np.arctan2(B[1], B[0]) + _phase_offset(angle, "bloch_rotate")
     theta = np.arctan2(np.hypot(B[0], B[1]), B[2])
     M_final = cpu_rot.Rz(phi) @ cpu_rot.Ry(theta) @ cpu_rot.Rz(flip) @ cpu_rot.Ry(-theta) @ cpu_rot.Rz(-phi) @ M_init
     return M_final
@@ -204,18 +212,7 @@ def bloch_rotate_batch(M_init, T, B, angle, Gamma):
     norm = np.linalg.norm(B, axis=1)
     flip = 2 * np.pi * Gamma * norm * T
 
-    if angle == "x":
-        phi = np.arctan2(B[:, 1], B[:, 0])
-    elif angle == "y":
-        phi = np.arctan2(B[:, 1], B[:, 0]) + np.pi / 2
-    elif isinstance(angle, (int, float)):
-        phi = np.arctan2(B[:, 1], B[:, 0]) + float(angle)
-    else:
-        raise NotImplementedError(
-            f'bloch_rotate("{angle}") has no verified formula -- "z" was never used '
-            f'anywhere in the codebase and has no independent ground truth to check '
-            f'against. Only "x" and "y" (real NMR pulse phases) are implemented.'
-        )
+    phi = np.arctan2(B[:, 1], B[:, 0]) + _phase_offset(angle, "bloch_rotate_batch")
     theta = np.arctan2(np.hypot(B[:, 0], B[:, 1]), B[:, 2])
 
     R = (cpu_rot_batch.Rz(phi) @ cpu_rot_batch.Ry(theta) @ cpu_rot_batch.Rz(flip) @ cpu_rot_batch.Ry(-theta) @ cpu_rot_batch.Rz(-phi))
@@ -239,18 +236,7 @@ def torch_bloch_rotate(M_init, T, B, angle, Gamma):
     torch = require_torch()
 
     flip = 2 * torch.pi * Gamma * torch.norm(B, dim=1) * T
-    if angle == "x":
-        phi = torch.atan2(B[:, 1], B[:, 0])
-    elif angle == "y":
-        phi = torch.atan2(B[:, 1], B[:, 0]) + torch.pi / 2
-    elif isinstance(angle, (int, float)):
-        phi = torch.atan2(B[:, 1], B[:, 0]) + float(angle)
-    else:
-        raise NotImplementedError(
-            f'torch_bloch_rotate("{angle}") has no verified formula -- "z" was never used '
-            f'anywhere in the codebase and has no independent ground truth to check '
-            f'against. Only "x" and "y" (real NMR pulse phases) are implemented.'
-        )
+    phi = torch.atan2(B[:, 1], B[:, 0]) + _phase_offset(angle, "torch_bloch_rotate")
     theta = torch.atan2(torch.hypot(B[:, 0], B[:, 1]), B[:, 2])
 
     # torch.permute (2, 0, 1) = change the order of dimension
