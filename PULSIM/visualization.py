@@ -225,10 +225,10 @@ def plot_3D_arrow_with_pulse(M_traj, time, rf, phase, color="viridis",
     ax_amp = fig.add_subplot(gs[0, 1])
     ax_pha = fig.add_subplot(gs[1, 1])
  
-    ax_amp.plot(t, amp, color='gray', linewidth=1)
-    red_line, = ax_amp.plot([], [], color='red', linewidth=2)
-    ax_pha.plot(t, pha, color='gray', linewidth=1)
-    blue_line, = ax_pha.plot([], [], color='blue', linewidth=2)
+    ax_amp.plot(t, amp, color='gray', linewidth=1, drawstyle='steps-post')
+    red_line, = ax_amp.plot([], [], color='red', linewidth=2, drawstyle='steps-post')
+    ax_pha.plot(t, pha, color='gray', linewidth=1, drawstyle='steps-post')
+    blue_line, = ax_pha.plot([], [], color='blue', linewidth=2, drawstyle='steps-post')
  
     font = {} if font_name is None else {"fontname": font_name}
     for ax, label in ((ax_amp, "Amplitude (mT)"), (ax_pha, "Phase (deg)")):
@@ -310,7 +310,7 @@ def plot_3D_arrow_snapshots(M_traj, time, rf, phase, frames, labels=None,
     ax_amp.set_ylabel("|RF| (mT)", **font)
  
     ax_pha = ax_amp.twinx()
-    ax_pha.plot(t, pha, color='tab:blue', linewidth=0.9, alpha=0.55)
+    ax_pha.plot(t, pha, color='tab:blue', linewidth=0.9, alpha=0.55, drawstyle='steps-post')
     ax_pha.set_ylabel("Phase (deg)", color='tab:blue', **font)
     ax_pha.tick_params(axis='y', labelcolor='tab:blue')
     ax_pha.set_ylim(-5, 365)
