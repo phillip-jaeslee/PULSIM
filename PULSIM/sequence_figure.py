@@ -27,6 +27,7 @@ only numpy and scipy (see the base-only CI job). Import it explicitly:
     from PULSIM.sequence_figure import draw_sequence
 """
 
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -36,6 +37,13 @@ from .liouville import Delay, IdealPulse, ShapePulseSegment, RawShapedPulseSegme
 __all__ = ["draw_sequence", "describe_sequence"]
 
 _PHASE_NAMES = {0: "x", 90: "y", 180: "-x", 270: "-y"}
+_ISOTOPE = {"H": "1H", "D": "2H", "T": "3H"}
+
+
+def _nucleus_label(name):
+    """Channel label with the isotope as a superscript: 'H' -> 1H, '13C' -> 13C."""
+    m = re.fullmatch(r"(\d+)([A-Za-z]+)", _ISOTOPE.get(str(name), str(name)))
+    return rf"$^{{{m.group(1)}}}${m.group(2)}" if m else str(name)
 
 def _phase_label(phase_rad):
     deg = round(np.degrees(phase_rad)) % 360
@@ -240,7 +248,7 @@ def draw_sequence(sequence, ax=None, to_scale=True, title=None, min_pulse_frac=0
     ys = [n - 1 - i for i in range(n)]
     for i, y in enumerate(ys):
         ax.plot([0, total], [y, y], color="0.25", lw=1.0, zorder=1)
-        ax.text(-0.015 * total, y, ss.nuclei[i], ha="right", va="center", fontsize=11)
+        ax.text(-0.015 * total, y, _nucleus_label(ss.nuclei[i]), ha="right", va="center", fontsize=11)
   
     for it, (x0, w) in zip(items, positions):
         if it["kind"] == "delay":
