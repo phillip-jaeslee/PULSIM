@@ -278,7 +278,6 @@ See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §9.
 
 Development before 1.0.0 (versions 0.0.1–0.1.0 and the work that followed) is
 kept in the archived repository
-[phillip-jaeslee/PULSIM-archive](https://github.com/phillip-jaeslee/PULSIM-archive).
 
 ## LICENSE
 

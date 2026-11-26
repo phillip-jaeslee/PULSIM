@@ -22,9 +22,8 @@ so in the commit message.
 In this repository the script is kept as a record only: it imports
 pulse_shape_list.py, a pre-refactor module from the repository root that is
 not part of PULSIM 1.0, so it does not run here. That file and the history of
-the refactor are in the archived repository,
-https://github.com/phillip-jaeslee/PULSIM-archive; tests/golden/shapes.npz was
-generated there and remains the reference for tests/test_rf_shape_golden.py.
+the refactor are kept in a private archive repository; tests/golden/shapes.npz
+was generated there and remains the reference for tests/test_rf_shape_golden.py.
 """
 
 import os
