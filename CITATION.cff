@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use PULSIM, please cite it as below."
+title: "PULSIM: PULse SIMulator"
+abstract: >-
+  Shaped RF pulses and NMR pulse sequences simulated with the Bloch
+  equations (single spin) and the density matrix (coupled spins), with
+  interactive Colab notebooks for teaching.
+type: software
+authors:
+  - family-names: Lee
+    given-names: Jaeseok
+    affiliation: "Seoul National University"
+    orcid: "https://orcid.org/0009-0000-0515-2538"
+version: 1.0.0
+date-released: 2026-11-26
+license: MIT
+repository-code: "https://github.com/phillip-jaeslee/PULSIM"
+keywords:
+  - NMR
+  - shaped pulses
+  - Bloch equations
+  - density matrix
+  - pulse sequences
+  - chemistry education
