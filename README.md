@@ -277,7 +277,7 @@ See [`docs/PHYSICS_SPECIFICATION.md`](docs/PHYSICS_SPECIFICATION.md) §9.
       gradients, the Bloch–Siegert phase); tutorials, tests and benchmarks
 
 Development before 1.0.0 (versions 0.0.1–0.1.0 and the work that followed) is
-kept in the archived repository
+kept in a private archived repository
 
 ## LICENSE
 
