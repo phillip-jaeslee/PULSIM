@@ -1,0 +1,611 @@
+{
+  "_generated": "2026-09-09",
+  "_note": "Snapshot of PULSIM calibration behaviour BEFORE the calibration redesign. This records what the code does, not what it should do. Not a correctness assertion.",
+  "_settings": {
+    "duration_ms": 2.0,
+    "flips_deg": [
+      90,
+      180
+    ],
+    "gamma_kHz_per_mT": 42.577478518,
+    "points": 1000
+  },
+  "_versions": {
+    "numpy": "1.26.3",
+    "scipy": "1.11.4"
+  },
+  "shapes": {
+    "cagauss": {
+      "cancellation_ratio": 0.029118052298034398,
+      "flip_180": {
+        "achieved_flip_deg": 114.42080663073712,
+        "mz": -0.4134351120794027,
+        "peak_rf_mT": 0.9798825674664304
+      },
+      "flip_90": {
+        "achieved_flip_deg": 101.8942617343098,
+        "mz": -0.20610618509315903,
+        "peak_rf_mT": 0.4899412837332152
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.008635824896500563
+    },
+    "calorentz": {
+      "cancellation_ratio": 0.1021200256348965,
+      "flip_180": {
+        "achieved_flip_deg": 19.13425209440994,
+        "mz": 0.9447531285879929,
+        "peak_rf_mT": 0.7786740300295186
+      },
+      "flip_90": {
+        "achieved_flip_deg": 177.5078656457059,
+        "mz": -0.9990542002989491,
+        "peak_rf_mT": 0.3893370150147593
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.014810400304028165
+    },
+    "capowhsec": {
+      "cancellation_ratio": 0.033304530630575924,
+      "flip_180": {
+        "achieved_flip_deg": 115.70483682883363,
+        "mz": -0.4337351506924891,
+        "peak_rf_mT": 1.1984650460909239
+      },
+      "flip_90": {
+        "achieved_flip_deg": 131.34862075436732,
+        "mz": -0.6606389471682081,
+        "peak_rf_mT": 0.5992325230454619
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": -0.009376415141975973
+    },
+    "casmoothedchirp": {
+      "cancellation_ratio": 0.04904098542669104,
+      "flip_180": {
+        "achieved_flip_deg": 157.87636385179025,
+        "mz": -0.9263733487661223,
+        "peak_rf_mT": 0.266065379745853
+      },
+      "flip_90": {
+        "achieved_flip_deg": 149.67553050847616,
+        "mz": -0.8631800016518619,
+        "peak_rf_mT": 0.1330326898729265
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.043796281907762115
+    },
+    "cawurst": {
+      "cancellation_ratio": 0.03837590148038412,
+      "flip_180": {
+        "achieved_flip_deg": 98.2428963066475,
+        "mz": -0.14336992110100757,
+        "peak_rf_mT": 0.37182847492194493
+      },
+      "flip_90": {
+        "achieved_flip_deg": 179.05456553138657,
+        "mz": -0.9998638625069703,
+        "peak_rf_mT": 0.18591423746097246
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.03136042114281285
+    },
+    "compositesmoothedchirp": {
+      "cancellation_ratio": 9.217222115514478e-15,
+      "flip_180": {
+        "achieved_flip_deg": 55.04236683333445,
+        "mz": 0.5729705652083351,
+        "peak_rf_mT": 1415622651503.7268
+      },
+      "flip_90": {
+        "achieved_flip_deg": 18.311079891777965,
+        "mz": 0.9493647398427801,
+        "peak_rf_mT": 707811325751.8634
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 2.9487523534044164e-16
+    },
+    "cos": {
+      "cancellation_ratio": 1.0,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -0.9999999999999982,
+        "peak_rf_mT": 0.011798460957680492
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.0,
+        "mz": 9.936712910829648e-17,
+        "peak_rf_mT": 0.005899230478840246
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.49766226339684017
+    },
+    "dsnob": {
+      "cancellation_ratio": 0.2847532992387193,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -0.9999999999999989,
+        "peak_rf_mT": 0.04060702408343515
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000003,
+        "mz": -3.5211498430540167e-16,
+        "peak_rf_mT": 0.020303512041717577
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.14459687498236914
+    },
+    "eburp1": {
+      "cancellation_ratio": 0.20208193055192286,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -0.9999999999999993,
+        "peak_rf_mT": 0.08759960121935091
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999993,
+        "mz": 1.3916548035480814e-15,
+        "peak_rf_mT": 0.043799800609675456
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.06702825929647574
+    },
+    "eburp2": {
+      "cancellation_ratio": 0.21141974574309053,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -0.999999999999999,
+        "peak_rf_mT": 0.09621849127556091
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.0,
+        "mz": 2.42861286636753e-17,
+        "peak_rf_mT": 0.048109245637780455
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.06102412028040082
+    },
+    "esnob": {
+      "cancellation_ratio": 1.0,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -0.9999999999999982,
+        "peak_rf_mT": 0.013196468350711378
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000001,
+        "mz": -9.3756382865684e-17,
+        "peak_rf_mT": 0.006598234175355689
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.4449409212186687
+    },
+    "gausscasg3": {
+      "cancellation_ratio": 0.36637585360735075,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -1.0000000000000033,
+        "peak_rf_mT": 0.04217424114710464
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999987,
+        "mz": 2.299809648276252e-15,
+        "peak_rf_mT": 0.02108712057355232
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.1392235787792385
+    },
+    "gausscasg4": {
+      "cancellation_ratio": 0.1412456625244567,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -0.9999999999999993,
+        "peak_rf_mT": 0.10796797884120986
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999993,
+        "mz": 1.2420620087993939e-15,
+        "peak_rf_mT": 0.05398398942060493
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.054383242585600754
+    },
+    "gausscasq3": {
+      "cancellation_ratio": 0.3244400632213341,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -0.9999999999999989,
+        "peak_rf_mT": 0.03877809103901284
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000006,
+        "mz": -7.884318198314588e-16,
+        "peak_rf_mT": 0.01938904551950642
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.15141665377213467
+    },
+    "gausscasq5": {
+      "cancellation_ratio": 0.13088620349709854,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -0.9999999999999986,
+        "peak_rf_mT": 0.10686627603135293
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000003,
+        "mz": -3.627604943864937e-16,
+        "peak_rf_mT": 0.053433138015676465
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.05494388878186298
+    },
+    "hard": {
+      "cancellation_ratio": 1.0,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -1.0000000000000513,
+        "peak_rf_mT": 0.005871648784798526
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999993,
+        "mz": 1.2073675392798577e-15,
+        "peak_rf_mT": 0.002935824392399263
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 1.0
+    },
+    "hermite": {
+      "cancellation_ratio": 0.6939559639906371,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999991,
+        "mz": -0.9999999999999962,
+        "peak_rf_mT": 0.03361463293680526
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.0,
+        "mz": 1.6656055874808562e-16,
+        "peak_rf_mT": 0.01680731646840263
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.17467538008929298
+    },
+    "hypsec": {
+      "cancellation_ratio": 0.33077562169216507,
+      "flip_180": {
+        "achieved_flip_deg": 178.86465191856078,
+        "mz": -0.9998036781718467,
+        "peak_rf_mT": 0.12063123900737954
+      },
+      "flip_90": {
+        "achieved_flip_deg": 149.45270271200823,
+        "mz": -0.8612098973448644,
+        "peak_rf_mT": 0.06031561950368977
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.07174737326782826
+    },
+    "i2snob": {
+      "cancellation_ratio": 0.6853174512632437,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -1.0000000000000013,
+        "peak_rf_mT": 0.0274173300219549
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999996,
+        "mz": 7.216517422699298e-16,
+        "peak_rf_mT": 0.01370866501097745
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.21415829988174273
+    },
+    "i3snob": {
+      "cancellation_ratio": 0.5599073282197535,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -1.0000000000000002,
+        "peak_rf_mT": 0.038563397951590445
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000003,
+        "mz": -3.1895872661807934e-16,
+        "peak_rf_mT": 0.019281698975795222
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.152259632104239
+    },
+    "iburp1": {
+      "cancellation_ratio": 0.35159739196715145,
+      "flip_180": {
+        "achieved_flip_deg": 179.9999999999999,
+        "mz": -1.0000000000000022,
+        "peak_rf_mT": 0.03927463894048171
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000014,
+        "mz": -2.3900694791356702e-15,
+        "peak_rf_mT": 0.019637319470240854
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.14950229825655806
+    },
+    "iburp2": {
+      "cancellation_ratio": 0.4639177819086369,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -1.0000000000000004,
+        "peak_rf_mT": 0.05839633692242936
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999996,
+        "mz": 7.489668607529865e-16,
+        "peak_rf_mT": 0.02919816846121468
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.10054823802729469
+    },
+    "qsneeze": {
+      "cancellation_ratio": 0.20427138162033998,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -1.000000000000001,
+        "peak_rf_mT": 0.11210967434319537
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000007,
+        "mz": -1.3631673914660247e-15,
+        "peak_rf_mT": 0.056054837171597684
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.052374148967946864
+    },
+    "reburp": {
+      "cancellation_ratio": 0.48431237628184726,
+      "flip_180": {
+        "achieved_flip_deg": 180.0,
+        "mz": -1.0000000000000058,
+        "peak_rf_mT": 0.07371309244392796
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.00000000000004,
+        "mz": -5.605325231750058e-16,
+        "peak_rf_mT": 0.03685654622196398
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.0796554396258028
+    },
+    "rsnob": {
+      "cancellation_ratio": 0.701223568857508,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -1.0000000000000013,
+        "peak_rf_mT": 0.02751081494007097
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999996,
+        "mz": 6.529065482707708e-16,
+        "peak_rf_mT": 0.013755407470035485
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.21343056531001395
+    },
+    "seduce1": {
+      "cancellation_ratio": 0.9999999999999998,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -1.0000000000000007,
+        "peak_rf_mT": 0.01272609241060655
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999993,
+        "mz": 1.2660526271892346e-15,
+        "peak_rf_mT": 0.006363046205303275
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.4613866217021027
+    },
+    "sinc": {
+      "cancellation_ratio": 1.0,
+      "flip_180": {
+        "achieved_flip_deg": 179.9999999999999,
+        "mz": -0.9999999999999971,
+        "peak_rf_mT": 0.013916515602756108
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999999,
+        "mz": 3.7278968211933985e-16,
+        "peak_rf_mT": 0.006958257801378054
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.4219194626301191
+    },
+    "sinc2p": {
+      "cancellation_ratio": 0.5120629534553793,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999997,
+        "mz": -0.9999999999999988,
+        "peak_rf_mT": 0.07540309812319823
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.0,
+        "mz": 9.432558900623889e-18,
+        "peak_rf_mT": 0.037701549061599116
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.07787012643969965
+    },
+    "sincos": {
+      "cancellation_ratio": 0.43629110269694366,
+      "flip_180": {
+        "achieved_flip_deg": 173.66766552118855,
+        "mz": -0.993898869375377,
+        "peak_rf_mT": 0.0423221692066873
+      },
+      "flip_90": {
+        "achieved_flip_deg": 152.96216187984962,
+        "mz": -0.8907065146879071,
+        "peak_rf_mT": 0.02116108460334365
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.14733352699834235
+    },
+    "smoothedchirp": {
+      "cancellation_ratio": 0.016738544875414305,
+      "flip_180": {
+        "achieved_flip_deg": 132.30880239507715,
+        "mz": -0.6731261356661589,
+        "peak_rf_mT": 0.7795246544894443
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.34646658841429,
+        "mz": 0.011406062471332617,
+        "peak_rf_mT": 0.38976232724472215
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.006435465189228111
+    },
+    "sneeze": {
+      "cancellation_ratio": 0.19533633824273922,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -1.000000000000002,
+        "peak_rf_mT": 0.1255106912563665
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999994,
+        "mz": 9.367506770274758e-16,
+        "peak_rf_mT": 0.06275534562818325
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.04678206076329523
+    },
+    "swrl11": {
+      "cancellation_ratio": 0.002381563090663371,
+      "flip_180": {
+        "achieved_flip_deg": 179.9999999999998,
+        "mz": -1.000000000000001,
+        "peak_rf_mT": 6.997705075044066
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999994,
+        "mz": 1.0326774865043732e-15,
+        "peak_rf_mT": 3.498852537522033
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.0008390820593080726
+    },
+    "swrl12": {
+      "cancellation_ratio": 0.0022676791164824594,
+      "flip_180": {
+        "achieved_flip_deg": 179.9999999999995,
+        "mz": -1.0,
+        "peak_rf_mT": 7.64181270220162
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999966,
+        "mz": 6.091131142452806e-15,
+        "peak_rf_mT": 3.82090635110081
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.0007683581126120629
+    },
+    "swrl17": {
+      "cancellation_ratio": 0.003146517062308447,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999955,
+        "mz": -1.0000000000000022,
+        "peak_rf_mT": 6.84599844941629
+      },
+      "flip_90": {
+        "achieved_flip_deg": 90.0000000000003,
+        "mz": -5.177632557492585e-15,
+        "peak_rf_mT": 3.422999224708145
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.0008576760319452248
+    },
+    "tanhtan": {
+      "cancellation_ratio": 0.08346289067491817,
+      "flip_180": {
+        "achieved_flip_deg": 38.76141992161267,
+        "mz": 0.7797597115202828,
+        "peak_rf_mT": 0.15133168447888085
+      },
+      "flip_90": {
+        "achieved_flip_deg": 176.74387634830708,
+        "mz": -0.9983856056499142,
+        "peak_rf_mT": 0.07566584223944042
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.011347590035004204
+    },
+    "uburp": {
+      "cancellation_ratio": 0.09198118028273958,
+      "flip_180": {
+        "achieved_flip_deg": 179.99999999999994,
+        "mz": -0.9999999999999986,
+        "peak_rf_mT": 0.23893043795825208
+      },
+      "flip_90": {
+        "achieved_flip_deg": 89.99999999999993,
+        "mz": 1.1319070680748666e-15,
+        "peak_rf_mT": 0.11946521897912604
+      },
+      "is_adiabatic": false,
+      "modulation": "real",
+      "signed_integral": 0.02457472072195535
+    },
+    "wurst": {
+      "cancellation_ratio": 0.022287528529637893,
+      "flip_180": {
+        "achieved_flip_deg": 112.54233925451284,
+        "mz": -0.38336603727827345,
+        "peak_rf_mT": 0.6402348695698054
+      },
+      "flip_90": {
+        "achieved_flip_deg": 138.05426895569883,
+        "mz": -0.7437782737791045,
+        "peak_rf_mT": 0.3201174347849027
+      },
+      "is_adiabatic": true,
+      "modulation": "complex",
+      "signed_integral": 0.012976329554831939
+    }
+  }
+}

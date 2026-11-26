@@ -1,0 +1,90 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  full:
+    name: Full install + test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install with all extras
+        run: pip install -e .[all] pytest
+      - name: Run test suite
+        run: pytest tests -q
+
+  reproducible:
+    # The claim the education paper makes -- "clone it and it runs" -- expressed
+    # as a job. The other two jobs test the package; this one tests the things we
+    # actually tell people to open. checkout is a fresh clone, and the install is
+    # the plain `pip install .` a reader would type, not `-e`.
+    name: Fresh clone runs (notebooks + tutorials)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install as a reader would, plus a kernel to execute notebooks
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install ".[viz]" nbclient ipykernel
+          python -m ipykernel install --user --name python3
+      - name: Execute every notebook and every wave/-free tutorial
+        env:
+          MPLBACKEND: Agg
+        run: python tools/check_reproducible.py
+      - name: Keep the figures the run produced
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-figures
+          path: tutorial_figures/
+          if-no-files-found: ignore
+
+  base-only:
+    # The JupyterLite/Pyodide guarantee, expressed as a test.
+    #
+    # This job installs ONLY what setup.py lists in install_requires -- numpy
+    # and scipy -- which is exactly what Pyodide provides in the browser. No
+    # torch, no pandas, no joblib, no matplotlib. If a top-level import of any
+    # of those ever creeps back into the package, this job goes red on a
+    # machine that genuinely does not have them, which a dev laptop never is.
+    name: Base install only (no torch/pandas/joblib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install base dependencies only
+        run: pip install -e .
+      - name: Package must import with numpy + scipy alone
+        run: python -c "import PULSIM; print('base import OK:', PULSIM.RFShape, PULSIM.NumpyBackend)"
+      - name: NumPy physics path must actually run
+        run: |
+          python - <<'EOF'
+          import numpy as np
+          import PULSIM
+
+          shape = PULSIM.RFShape.create("hard", duration=0.01, resample_to=100)
+          pulse = PULSIM.Pulse(shape, flip=np.pi / 2, axis="x",
+                               backend=PULSIM.NumpyBackend(Gamma=42.577478518))
+
+          df = np.linspace(-5, 5, 11)
+          M = np.zeros((3, df.size))
+          M[2] = 1.0
+          out = pulse.apply(M, df)
+
+          mz = float(out[2, df.size // 2])
+          assert abs(mz) < 1e-9, f"on-resonance 90 deg should null Mz, got {mz}"
+          print("base physics path OK: Mz on-resonance =", mz)
+          EOF
+      - name: Test suite must pass without the optional extras
+        run: |
+          pip install pytest
+          pytest tests -q
