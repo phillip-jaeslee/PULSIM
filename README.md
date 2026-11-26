@@ -1,7 +1,7 @@
 # PULSIM: PULse SIMulator
 > Shaped RF pulses and pulse sequences, simulated with the Bloch equations (single spin) and the density matrix (coupled spins)
 
-<img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=Python&logoColor=white"/> <img src="https://img.shields.io/badge/Google%20Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white"/>
+<img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=Python&logoColor=white"/> <img src="https://img.shields.io/badge/Google%20Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white"/> [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24551760.svg)](https://doi.org/10.5281/zenodo.24551760)
 
 Try it in the browser, no installation:
 
